@@ -3,7 +3,7 @@ import type { IRestaurant } from "../types";
 import axios from "axios";
 import { restaurantService } from "../main";
 import toast from "react-hot-toast";
-import { BiEdit, BiMapPin, BiSave } from "react-icons/bi";
+import { BiEdit, BiMapPin, BiSave, BiStar } from "react-icons/bi";
 import { useAppData } from "../context/useAppData";
 import { getErrorMessage } from "../utils/errors";
 import { AppButton } from "./ui/AppUI";
@@ -117,6 +117,15 @@ const RestaurantProfile = ({ restaurant, isSeller, onUpdate }: props) => {
             ) : (
               <h2 className="text-2xl font-black text-gray-900 dark:text-white">{restaurant.name}</h2>
             )}
+
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-sm font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+                <BiStar className="fill-amber-400 text-amber-400" />
+                {(restaurant.reviewCount ?? 0) > 0
+                  ? `${restaurant.avgRating?.toFixed(1)} · ${restaurant.reviewCount} ratings`
+                  : "New · no ratings yet"}
+              </span>
+            </div>
 
             <div className="mt-2 flex items-start gap-2 text-sm text-gray-500 dark:text-gray-400">
               <BiMapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#E23744]" />

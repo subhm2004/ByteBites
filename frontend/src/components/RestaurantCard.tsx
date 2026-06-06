@@ -8,6 +8,8 @@ type props = {
   name: string;
   distance: string;
   isOpen: boolean;
+  avgRating?: number;
+  reviewCount?: number;
   featured?: boolean;
 };
 
@@ -17,6 +19,8 @@ const RestaurantCard = ({
   name,
   distance,
   isOpen,
+  avgRating = 0,
+  reviewCount = 0,
   featured = false,
 }: props) => {
   const navigate = useNavigate();
@@ -61,7 +65,7 @@ const RestaurantCard = ({
           <div className="mt-1 flex items-center gap-3 text-xs text-white/85">
             <span className="flex items-center gap-0.5">
               <BiStar className="text-amber-400" />
-              4.2
+              {reviewCount > 0 ? avgRating.toFixed(1) : "New"}
             </span>
             <span className="flex items-center gap-0.5">
               <BiTime />

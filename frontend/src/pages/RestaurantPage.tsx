@@ -5,6 +5,7 @@ import axios from "axios";
 import { restaurantService } from "../main";
 import RestaurantProfile from "../components/RestaurantProfile";
 import MenuItems from "../components/MenuItems";
+import RestaurantReviews from "../components/RestaurantReviews";
 import { AppCard, AppPage, LoadingScreen, PageHeader } from "../components/ui/AppUI";
 
 const RestaurantPage = () => {
@@ -90,6 +91,17 @@ const RestaurantPage = () => {
               items={menuItems}
               onItemDeleted={() => {}}
             />
+          </AppCard>
+        </div>
+
+        <div>
+          <PageHeader
+            eyebrow="Reviews"
+            title="Customer ratings"
+            subtitle="Real feedback from delivered orders"
+          />
+          <AppCard>
+            <RestaurantReviews restaurantId={restaurant._id} />
           </AppCard>
         </div>
       </div>

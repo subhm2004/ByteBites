@@ -266,6 +266,8 @@ const Explore = () => {
                   image={res.image ?? ""}
                   distance={`${distance}`}
                   isOpen={res.isOpen}
+                  avgRating={res.avgRating}
+                  reviewCount={res.reviewCount}
                   featured={displayRestaurants.length <= 2 && index === 0}
                 />
               );

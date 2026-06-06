@@ -196,7 +196,7 @@ export const acceptOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
         orderId,
         riderId: rider._id.toString(),
         riderUserId: rider.userId,
-        riderName: rider.picture,
+        riderName: req.user?.name || "Delivery partner",
         riderPhone: rider.phoneNumber,
       },
       {
@@ -307,3 +307,27 @@ export const updateOrderStatus = TryCatch(
     }
   }
 );
+
+export const updateRiderRating = TryCatch(async (req, res) => {
+  if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+
+  const { riderId, avgRating, reviewCount } = req.body;
+
+  if (!riderId || avgRating === undefined || reviewCount === undefined) {
+    return res.status(400).json({ message: "Missing rating fields" });
+  }
+
+  const rider = await Rider.findByIdAndUpdate(
+    riderId,
+    { avgRating, reviewCount },
+    { new: true }
+  );
+
+  if (!rider) {
+    return res.status(404).json({ message: "Rider not found" });
+  }
+
+  res.json({ message: "Rider rating updated", rider });
+});

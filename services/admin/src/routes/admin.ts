@@ -13,11 +13,14 @@ import {
   toggleCoupon,
   updateCoupon,
 } from "../controllers/coupon.js";
+import { listUsers, setUserBanStatus } from "../controllers/users.js";
 
 const router = express.Router();
 
 router.get("/admin/restaurant/pending", isAuth, isAdmin, getPendingRestaurant);
 router.get("/admin/rider/pending", isAuth, isAdmin, getPendingRiders);
+router.get("/admin/users", isAuth, isAdmin, listUsers);
+router.patch("/admin/users/:id/status", isAuth, isAdmin, setUserBanStatus);
 router.patch("/verify/rider/:id", isAuth, isAdmin, verifyRider);
 router.patch("/verify/restaurant/:id", isAuth, isAdmin, verifyRestaurant);
 

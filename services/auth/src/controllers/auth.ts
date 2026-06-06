@@ -33,6 +33,12 @@ export const loginUser = TryCatch(async (req, res) => {
     });
   }
 
+  if (user.isBanned) {
+    return res.status(403).json({
+      message: "Your account has been suspended. Contact support.",
+    });
+  }
+
   const token = jwt.sign({ user }, process.env.JWT_SEC as string, {
     expiresIn: "15d",
   });
@@ -82,6 +88,12 @@ export const addUserRole = TryCatch(async (req: AuthenticatedRequest, res) => {
 });
 
 export const myProfile = TryCatch(async (req: AuthenticatedRequest, res) => {
-  const user = req.user;
-  res.json(user);
+  const fresh = await User.findById(req.user?._id);
+  if (!fresh) {
+    return res.status(404).json({ message: "User not found" });
+  }
+  if (fresh.isBanned) {
+    return res.status(403).json({ message: "Your account has been suspended." });
+  }
+  res.json(fresh);
 });

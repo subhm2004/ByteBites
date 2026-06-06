@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { IOrder } from "../types";
-import { ORDER_ACTIONS } from "../utils/orderflow";
+import { ORDER_ACTIONS, SELLER_CANCELLABLE } from "../utils/orderflow";
 import axios from "axios";
 import { restaurantService } from "../main";
 import toast from "react-hot-toast";
@@ -25,6 +25,8 @@ const statusColor = (status: string) => {
       return "bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-400";
     case "delivered":
       return "bg-green-100 text-green-700 dark:bg-emerald-950/50 dark:text-emerald-400";
+    case "cancelled":
+      return "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400";
     default:
       return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
   }
@@ -50,6 +52,13 @@ const OrderCard = ({ order, onStatusUpdate }: props) => {
   }, [order.status]);
 
   const updateStatus = async (status: string) => {
+    if (
+      status === "cancelled" &&
+      !window.confirm("Cancel this order? The customer will be notified.")
+    ) {
+      return;
+    }
+
     try {
       setLoading(true);
       setRetryVisible(false);
@@ -63,7 +72,9 @@ const OrderCard = ({ order, onStatusUpdate }: props) => {
         }
       );
 
-      toast.success("Order updated");
+      toast.success(
+        status === "cancelled" ? "Order cancelled" : "Order updated"
+      );
       onStatusUpdate?.();
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Failed to update order"));
@@ -71,6 +82,8 @@ const OrderCard = ({ order, onStatusUpdate }: props) => {
       setLoading(false);
     }
   };
+
+  const canCancel = SELLER_CANCELLABLE.includes(order.status);
 
   return (
     <div className="space-y-3 rounded-xl border border-gray-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 dark:shadow-none">
@@ -117,8 +130,31 @@ const OrderCard = ({ order, onStatusUpdate }: props) => {
               Mark as {status.replaceAll("_", " ")}
             </button>
           ))}
+          {canCancel && (
+            <button
+              disabled={loading}
+              onClick={() => updateStatus("cancelled")}
+              className="rounded-lg border border-red-300 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"
+            >
+              Cancel order
+            </button>
+          )}
         </div>
       )}
+
+      {order.paymentStatus === "paid" &&
+        actions.length === 0 &&
+        canCancel && (
+          <div className="pt-2">
+            <button
+              disabled={loading}
+              onClick={() => updateStatus("cancelled")}
+              className="w-full rounded-lg border border-red-300 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"
+            >
+              Cancel order
+            </button>
+          </div>
+        )}
 
       {order.status === "ready_for_rider" && retryVisible && (
         <div className="pt-2">

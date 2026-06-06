@@ -14,6 +14,8 @@ export interface IRestaurant extends Document {
     formattedAddress: string;
   };
   isOpen: boolean;
+  avgRating: number;
+  reviewCount: number;
   createdAt: Date;
 }
 
@@ -60,6 +62,14 @@ const schema = new Schema<IRestaurant>(
     isOpen: {
       type: Boolean,
       default: false,
+    },
+    avgRating: {
+      type: Number,
+      default: 0,
+    },
+    reviewCount: {
+      type: Number,
+      default: 0,
     },
   },
   {

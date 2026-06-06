@@ -4,6 +4,7 @@ import { adminService } from "../main";
 import AdminRestaurantCard from "../components/AdminRestaurantCard";
 import RiderAdmin from "../components/RiderAdmin";
 import AdminCouponPanel from "../components/AdminCouponPanel";
+import AdminUserPanel from "../components/AdminUserPanel";
 import type { IRider, IRestaurant } from "../types";
 import {
   AppCard,
@@ -14,13 +15,13 @@ import {
   RoleShell,
 } from "../components/ui/AppUI";
 
-type AdminTab = "restaurant" | "rider" | "coupons";
+type AdminTab = "users" | "restaurant" | "rider" | "coupons";
 
 const Admin = () => {
   const [restaurant, setRestaurant] = useState<IRestaurant[]>([]);
   const [riders, setRiders] = useState<IRider[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<AdminTab>("restaurant");
+  const [tab, setTab] = useState<AdminTab>("users");
 
   const fetchData = async () => {
     try {
@@ -68,12 +69,13 @@ const Admin = () => {
       <PageHeader
         eyebrow="Admin"
         title="Admin dashboard"
-        subtitle="Verify partners and manage discount coupons"
+        subtitle="Manage users, verify partners, and coupons"
       />
 
       <AppCard className="mb-6 !p-2">
         <AppTabs
           tabs={[
+            { key: "users", label: "Users" },
             { key: "restaurant", label: `Restaurants (${restaurant.length})` },
             { key: "rider", label: `Riders (${riders.length})` },
             { key: "coupons", label: "Coupons" },
@@ -82,6 +84,8 @@ const Admin = () => {
           onChange={(k) => setTab(k as AdminTab)}
         />
       </AppCard>
+
+      {tab === "users" && <AdminUserPanel />}
 
       {tab === "restaurant" && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -57,10 +57,10 @@ const AddRestaurant = ({ fetchMyRestaurant }: props) => {
     <div className="mx-auto max-w-lg">
       <div className="mb-6 text-center">
         <span className="text-4xl">🍽️</span>
-        <h1 className="mt-2 text-2xl font-black text-gray-900">
+        <h1 className="mt-2 text-2xl font-black text-gray-900 dark:text-white">
           Register your restaurant
         </h1>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           Join ByteBites and start receiving orders
         </p>
       </div>
@@ -82,13 +82,15 @@ const AddRestaurant = ({ fetchMyRestaurant }: props) => {
           placeholder="Tell customers about your restaurant..."
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#E23744]/40 focus:ring-2 focus:ring-[#E23744]/10"
+          className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[#E23744]/40 focus:ring-2 focus:ring-[#E23744]/10 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-[#E23744]/50"
           rows={3}
         />
 
-        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-600 transition hover:border-[#E23744]/30 hover:bg-red-50/30">
-          <BiUpload className="h-5 w-5 text-[#E23744]" />
-          {image ? image.name : "Upload restaurant cover photo"}
+        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-white p-4 text-sm text-gray-600 transition hover:border-[#E23744]/30 hover:bg-red-50/30 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-200 dark:hover:border-[#E23744]/40 dark:hover:bg-red-950/20">
+          <BiUpload className="h-5 w-5 shrink-0 text-[#E23744]" />
+          <span className="truncate">
+            {image ? image.name : "Upload restaurant cover photo"}
+          </span>
           <input
             type="file"
             accept="image/*"
@@ -97,9 +99,9 @@ const AddRestaurant = ({ fetchMyRestaurant }: props) => {
           />
         </label>
 
-        <div className="flex items-start gap-3 rounded-xl bg-gray-50 p-4">
+        <div className="flex items-start gap-3 rounded-xl bg-gray-50 p-4 dark:bg-gray-800/60">
           <BiMapPin className="mt-0.5 h-5 w-5 shrink-0 text-[#E23744]" />
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-gray-300">
             {loadingLocation
               ? "Fetching your location..."
               : location?.formattedAddress || "Location not available"}

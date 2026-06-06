@@ -358,7 +358,12 @@ export const getRestaurantSalesAnalytics = TryCatch(
   }
 );
 
-const ALLOWED_STATUSES = ["accepted", "preparing", "ready_for_rider"] as const;
+const SELLER_STATUS_TRANSITIONS: Record<string, string[]> = {
+  placed: ["accepted", "cancelled"],
+  accepted: ["preparing", "cancelled"],
+  preparing: ["ready_for_rider", "cancelled"],
+  ready_for_rider: ["ready_for_rider"],
+};
 
 export const updateOrderStatus = TryCatch(
   async (req: AuthenticatedRequest, res) => {
@@ -373,17 +378,18 @@ export const updateOrderStatus = TryCatch(
       });
     }
 
-    if (!ALLOWED_STATUSES.includes(status)) {
-      return res.status(400).json({
-        message: "Invalid order status",
-      });
-    }
-
     const order = await Order.findById(orderId);
 
     if (!order) {
       return res.status(404).json({
         message: "Order not found",
+      });
+    }
+
+    const allowedNext = SELLER_STATUS_TRANSITIONS[order.status] || [];
+    if (!allowedNext.includes(status)) {
+      return res.status(400).json({
+        message: "Invalid order status transition",
       });
     }
 
@@ -428,7 +434,6 @@ export const updateOrderStatus = TryCatch(
       }
     );
 
-    // now assign riders
     if (status === "ready_for_rider") {
       console.log(
         "Publishing Order ready for rider event for order",
@@ -445,7 +450,10 @@ export const updateOrderStatus = TryCatch(
     }
 
     res.json({
-      message: "order status updated successfully",
+      message:
+        status === "cancelled"
+          ? "Order cancelled successfully"
+          : "order status updated successfully",
       order,
     });
   }

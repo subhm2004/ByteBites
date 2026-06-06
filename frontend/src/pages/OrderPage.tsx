@@ -13,6 +13,7 @@ import {
   StatusBadge,
 } from "../components/ui/AppUI";
 import DownloadReceiptButton from "../components/DownloadReceiptButton";
+import ReviewModal from "../components/ReviewModal";
 import { MdDeliveryDining } from "react-icons/md";
 
 const OrderPage = () => {
@@ -21,16 +22,39 @@ const OrderPage = () => {
 
   const [order, setOrder] = useState<IOrder | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasRestaurantReview, setHasRestaurantReview] = useState(false);
+  const [hasRiderReview, setHasRiderReview] = useState(false);
+  const [showReview, setShowReview] = useState(false);
+
+  const needsReview = (current: IOrder | null) => {
+    if (!current || current.status !== "delivered") return false;
+    if (!hasRestaurantReview) return true;
+    if (current.riderId && !hasRiderReview) return true;
+    return false;
+  };
 
   const fetchOrder = async () => {
     try {
-      const { data } = await axios.get(`${restaurantService}/api/order/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
 
-      setOrder(data);
+      const [orderRes, reviewsRes] = await Promise.all([
+        axios.get(`${restaurantService}/api/order/${id}`, { headers }),
+        axios.get(`${restaurantService}/api/review/my`, { headers }),
+      ]);
+
+      setOrder(orderRes.data);
+
+      const restaurantReviews =
+        reviewsRes.data.restaurantReviews || reviewsRes.data.reviews || [];
+      const riderReviews = reviewsRes.data.riderReviews || [];
+
+      setHasRestaurantReview(
+        restaurantReviews.some((r: { orderId: string }) => r.orderId === id)
+      );
+      setHasRiderReview(
+        riderReviews.some((r: { orderId: string }) => r.orderId === id)
+      );
     } catch (error) {
       console.log(error);
     } finally {
@@ -67,6 +91,16 @@ const OrderPage = () => {
       socket.emit("leave", `user:${id}`);
     };
   }, [socket, id]);
+
+  useEffect(() => {
+    if (!order || !needsReview(order) || !id) return;
+
+    const key = `review-prompt-${id}`;
+    if (sessionStorage.getItem(key)) return;
+
+    setShowReview(true);
+    sessionStorage.setItem(key, "1");
+  }, [order, hasRestaurantReview, hasRiderReview, id]);
 
   const [riderLocation, setRiderLocation] = useState<[number, number] | null>(
     null
@@ -109,6 +143,15 @@ const OrderPage = () => {
 
   return (
     <AppPage narrow>
+      {showReview && order && (
+        <ReviewModal
+          order={order}
+          hasRestaurantReview={hasRestaurantReview}
+          hasRiderReview={hasRiderReview}
+          onClose={() => setShowReview(false)}
+          onSubmitted={fetchOrder}
+        />
+      )}
       <PageHeader
         eyebrow="Order tracking"
         title={`#${order._id.slice(-6).toUpperCase()}`}
@@ -205,6 +248,22 @@ const OrderPage = () => {
             variant="primary"
             label="Download receipt (PDF)"
           />
+        )}
+
+        {order.status === "delivered" && needsReview(order) && (
+          <button
+            type="button"
+            onClick={() => setShowReview(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-amber-200 bg-amber-50 py-3.5 text-sm font-semibold text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/60"
+          >
+            ⭐ Rate your order
+          </button>
+        )}
+
+        {order.status === "delivered" && !needsReview(order) && (
+          <p className="text-center text-sm text-gray-500">
+            Thanks for your feedback!
+          </p>
         )}
       </div>
     </AppPage>

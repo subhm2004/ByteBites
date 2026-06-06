@@ -84,9 +84,11 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
     };
 
     socket.on("order:new", onNewOrder);
+    socket.on("order:update", onNewOrder);
 
     return () => {
       socket.off("order:new", onNewOrder);
+      socket.off("order:update", onNewOrder);
     };
   }, [socket, audioUnlocked]);
 

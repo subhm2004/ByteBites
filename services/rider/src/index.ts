@@ -10,6 +10,7 @@ dotenv.config();
 
 await connectRabbitMQ();
 startOrderReadyConsumer();
+await connectDB();
 
 const app = express();
 app.use(express.json());
@@ -19,5 +20,4 @@ app.use("/api/rider", riderRoutes);
 
 app.listen(process.env.PORT, () => {
   console.log(`Rider service is running on port ${process.env.PORT}`);
-  connectDB();
 });

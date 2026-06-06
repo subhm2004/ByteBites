@@ -4,7 +4,7 @@ import { useSocket } from "../context/useSocket";
 import axios from "axios";
 import { riderService } from "../main";
 import toast from "react-hot-toast";
-import { BiUpload } from "react-icons/bi";
+import { BiUpload, BiStar } from "react-icons/bi";
 import type { IOrder, IRider } from "../types";
 import { getErrorMessage } from "../utils/errors";
 import audio from "../assets/faaah.mp3";
@@ -22,6 +22,8 @@ import {
 interface IRiderProfile extends IRider {
   isVerified: boolean;
   isAvailble: boolean;
+  avgRating?: number;
+  reviewCount?: number;
 }
 
 const RiderDashboard = () => {
@@ -258,9 +260,11 @@ const RiderDashboard = () => {
               onChange={(e) => setDrivingLicenseNumber(e.target.value)}
             />
 
-            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-600 transition hover:border-[#E23744]/30 hover:bg-red-50/30">
-              <BiUpload className="h-5 w-5 text-[#E23744]" />
-              {image ? image.name : "Upload profile photo"}
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-white p-4 text-sm text-gray-600 transition hover:border-[#E23744]/30 hover:bg-red-50/30 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-200 dark:hover:border-[#E23744]/40 dark:hover:bg-red-950/20">
+              <BiUpload className="h-5 w-5 shrink-0 text-[#E23744]" />
+              <span className="truncate">
+                {image ? image.name : "Upload profile photo"}
+              </span>
               <input
                 type="file"
                 accept="image/*"
@@ -293,6 +297,13 @@ const RiderDashboard = () => {
           />
           <p className="mt-3 text-lg font-bold text-gray-900 dark:text-white">{user?.name}</p>
           <p className="text-sm text-gray-500">{profile.phoneNumber}</p>
+
+          {(profile.reviewCount ?? 0) > 0 && (
+            <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+              <BiStar className="fill-amber-400 text-amber-400" />
+              {profile.avgRating?.toFixed(1)} · {profile.reviewCount} ratings
+            </div>
+          )}
 
           <div className="mt-3 flex justify-center gap-2">
             <span

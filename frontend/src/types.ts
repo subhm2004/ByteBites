@@ -39,6 +39,8 @@ export interface IRider {
   drivingLicenseNumber: string;
   isVerified?: boolean;
   isAvailble?: boolean;
+  avgRating?: number;
+  reviewCount?: number;
 }
 
 export interface IRestaurant {
@@ -56,6 +58,8 @@ export interface IRestaurant {
     formattedAddress: string;
   };
   isOpen: boolean;
+  avgRating?: number;
+  reviewCount?: number;
   createdAt: Date;
 }
 

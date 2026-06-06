@@ -14,6 +14,7 @@ import {
   StatusBadge,
 } from "../components/ui/AppUI";
 import DownloadReceiptButton from "../components/DownloadReceiptButton";
+import ReviewModal from "../components/ReviewModal";
 
 const ACTIVE_STATUSES = [
   "placed",
@@ -27,21 +28,50 @@ const ACTIVE_STATUSES = [
 const Orders = () => {
   const [orders, setOrders] = useState<IOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [restaurantReviewedIds, setRestaurantReviewedIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [riderReviewedIds, setRiderReviewedIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [reviewOrder, setReviewOrder] = useState<IOrder | null>(null);
   const navigate = useNavigate();
   const { socket } = useSocket();
 
+  const orderNeedsReview = (order: IOrder) => {
+    if (order.status !== "delivered") return false;
+    if (!restaurantReviewedIds.has(order._id)) return true;
+    if (order.riderId && !riderReviewedIds.has(order._id)) return true;
+    return false;
+  };
+
   const fetchOrders = async () => {
     try {
-      const { data } = await axios.get(
-        `${restaurantService}/api/order/myorder`,
-        {
+      const [ordersRes, reviewsRes] = await Promise.all([
+        axios.get(`${restaurantService}/api/order/myorder`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-        }
-      );
+        }),
+        axios.get(`${restaurantService}/api/review/my`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }),
+      ]);
 
-      setOrders(data.orders || []);
+      setOrders(ordersRes.data.orders || []);
+
+      const restaurantReviews =
+        reviewsRes.data.restaurantReviews || reviewsRes.data.reviews || [];
+      const riderReviews = reviewsRes.data.riderReviews || [];
+
+      setRestaurantReviewedIds(
+        new Set(restaurantReviews.map((r: { orderId: string }) => r.orderId))
+      );
+      setRiderReviewedIds(
+        new Set(riderReviews.map((r: { orderId: string }) => r.orderId))
+      );
     } catch (error) {
       console.log(error);
     } finally {
@@ -93,6 +123,15 @@ const Orders = () => {
 
   return (
     <AppPage narrow>
+      {reviewOrder && (
+        <ReviewModal
+          order={reviewOrder}
+          hasRestaurantReview={restaurantReviewedIds.has(reviewOrder._id)}
+          hasRiderReview={riderReviewedIds.has(reviewOrder._id)}
+          onClose={() => setReviewOrder(null)}
+          onSubmitted={fetchOrders}
+        />
+      )}
       <PageHeader
         eyebrow="Orders"
         title="My Orders"
@@ -131,6 +170,8 @@ const Orders = () => {
                 key={order._id}
                 order={order}
                 onClick={() => navigate(`/order/${order._id}`)}
+                canReview={orderNeedsReview(order)}
+                onReview={() => setReviewOrder(order)}
               />
             ))
           )}
@@ -145,9 +186,13 @@ export default Orders;
 const OrderRow = ({
   order,
   onClick,
+  canReview = false,
+  onReview,
 }: {
   order: IOrder;
   onClick: () => void;
+  canReview?: boolean;
+  onReview?: () => void;
 }) => (
   <AppCard
     hover
@@ -176,6 +221,18 @@ const OrderRow = ({
         ₹{order.totalAmount}
       </span>
       <div className="flex items-center gap-2">
+        {canReview && onReview && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onReview();
+            }}
+            className="rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-400"
+          >
+            ⭐ Rate
+          </button>
+        )}
         {order.paymentStatus === "paid" && (
           <DownloadReceiptButton
             order={order}

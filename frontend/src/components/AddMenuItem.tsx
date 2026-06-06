@@ -73,9 +73,11 @@ const AddMenuItem = ({ onItemAdded }: { onItemAdded: () => void }) => {
         className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
       />
 
-      <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 p-4 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
-        <BiUpload className="h-5 w-5 text-red-500" />
-        {image ? image.name : "Upload restaurant image"}
+      <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-200 dark:hover:border-[#E23744]/40 dark:hover:bg-gray-800">
+        <BiUpload className="h-5 w-5 shrink-0 text-red-500" />
+        <span className="truncate">
+          {image ? image.name : "Upload restaurant image"}
+        </span>
         <input
           type="file"
           accept="image/*"

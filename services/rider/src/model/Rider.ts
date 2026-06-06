@@ -7,6 +7,8 @@ export interface IRider extends Document {
   aadharNumber: string;
   drivingLicenseNumber: string;
   isVerified: boolean;
+  avgRating: number;
+  reviewCount: number;
   location: {
     type: "Point";
     coordinates: [number, number];
@@ -45,6 +47,14 @@ const schema = new Schema<IRider>(
     isVerified: {
       type: Boolean,
       default: false,
+    },
+    avgRating: {
+      type: Number,
+      default: 0,
+    },
+    reviewCount: {
+      type: Number,
+      default: 0,
     },
 
     location: {

@@ -5,6 +5,7 @@ export interface IUser extends Document {
   email: string;
   image: string;
   role: string;
+  isBanned?: boolean;
 }
 
 const schema: Schema<IUser> = new Schema(
@@ -25,6 +26,10 @@ const schema: Schema<IUser> = new Schema(
     role: {
       type: String,
       default: null,
+    },
+    isBanned: {
+      type: Boolean,
+      default: false,
     },
   },
   {
