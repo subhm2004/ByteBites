@@ -2,22 +2,43 @@
 
 # 🍔 ByteBites
 
-### Production-Style Food Delivery Platform — Zomato / Swiggy Clone
-
-[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
-[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
-[![RabbitMQ](https://img.shields.io/badge/RabbitMQ-CloudAMQP-FF6600?logo=rabbitmq&logoColor=white)](https://www.rabbitmq.com/)
-[![Socket.IO](https://img.shields.io/badge/Socket.IO-4.8-010101?logo=socket.io&logoColor=white)](https://socket.io/)
-
-**Microservices · Real-time tracking · Coupon engine · Dynamic ETA · Role-based dashboards**
-
-[About](#-about) · [Features](#-complete-feature-list) · [Architecture](#-system-design-hld) · [Coupon Engine](#-coupon--discount-engine-lld) · [Dynamic ETA](#-dynamic-eta-system) · [Setup](#-getting-started)
+[![Typing SVG](https://readme-typing-svg.herokuapp.com?font=Fira+Code&weight=600&size=22&duration=3000&pause=1200&color=E23744&center=true&vCenter=true&width=620&lines=Production-Style+Food+Delivery+Platform;Zomato+%2F+Swiggy+Clone;6+Microservices+%7C+Live+Tracking+%7C+Dynamic+ETA)](https://git.io/typing-svg)
 
 <br />
 
-<img src="https://img.shields.io/badge/Brand-%23E23744?style=for-the-badge&labelColor=1a1a1a" alt="Brand color" />
+[![GitHub stars](https://img.shields.io/github/stars/subhm2004/ByteBites?style=for-the-badge&logo=github&label=Stars&color=E23744&logoColor=white)](https://github.com/subhm2004/ByteBites/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/subhm2004/ByteBites?style=for-the-badge&logo=github&label=Forks&color=1a1a1a&logoColor=white)](https://github.com/subhm2004/ByteBites/network/members)
+[![Last commit](https://img.shields.io/github/last-commit/subhm2004/ByteBites?style=for-the-badge&logo=git&label=Updated&color=555555&logoColor=white)](https://github.com/subhm2004/ByteBites/commits/main)
+[![License](https://img.shields.io/badge/License-Educational-blue?style=for-the-badge)](https://github.com/subhm2004/ByteBites)
+
+<br />
+
+[![React](https://img.shields.io/github/package-json/dependency-version/subhm2004/ByteBites/react?filename=frontend%2Fpackage.json&logo=react&logoColor=white&label=React&color=20232a)](https://react.dev/)
+[![TypeScript](https://img.shields.io/github/package-json/dependency-version/subhm2004/ByteBites/typescript?filename=frontend%2Fpackage.json&logo=typescript&logoColor=white&label=TypeScript&color=3178C6)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/github/package-json/dependency-version/subhm2004/ByteBites/vite?filename=frontend%2Fpackage.json&logo=vite&logoColor=white&label=Vite&color=646CFF)](https://vitejs.dev/)
+[![Express](https://img.shields.io/github/package-json/dependency-version/subhm2004/ByteBites/express?filename=services%2Frestaurant%2Fpackage.json&logo=express&logoColor=white&label=Express&color=000000)](https://expressjs.com/)
+[![Mongoose](https://img.shields.io/github/package-json/dependency-version/subhm2004/ByteBites/mongoose?filename=services%2Frestaurant%2Fpackage.json&logo=mongodb&logoColor=white&label=Mongoose&color=47A248)](https://mongoosejs.com/)
+[![Socket.IO](https://img.shields.io/github/package-json/dependency-version/subhm2004/ByteBites/socket.io-client?filename=frontend%2Fpackage.json&logo=socket.io&logoColor=white&label=Socket.IO&color=010101)](https://socket.io/)
+[![RabbitMQ](https://img.shields.io/badge/RabbitMQ-CloudAMQP-FF6600?style=flat-square&logo=rabbitmq&logoColor=white)](https://www.rabbitmq.com/)
+
+<br />
+
+[![Microservices](https://img.shields.io/badge/Microservices-6_services-E23744?style=flat-square)](./ARCHITECTURE.md)
+[![Realtime](https://img.shields.io/badge/Real--time-Live_tracking-010101?style=flat-square&logo=socket.io&logoColor=white)](./ARCHITECTURE.md#11-realtime--socketio)
+[![Payments](https://img.shields.io/badge/Payments-Razorpay+%2B+Stripe-635BFF?style=flat-square)](./README.md#-complete-feature-list)
+[![Coupon Engine](https://img.shields.io/badge/Coupon-Strategy+%2B+Factory-F59E0B?style=flat-square)](./README.md#-coupon--discount-engine-lld)
+[![Dynamic ETA](https://img.shields.io/badge/ETA-Haversine+model-3B82F6?style=flat-square)](./README.md#-dynamic-eta-system)
+[![Roles](https://img.shields.io/badge/Roles-4_dashboards-10B981?style=flat-square)](./README.md#-complete-feature-list)
+
+<br />
+
+[About](#-about) · [Features](#-complete-feature-list) · [Architecture](./ARCHITECTURE.md) · [Coupon Engine](#-coupon--discount-engine-lld) · [Dynamic ETA](#-dynamic-eta-system) · [Setup](#-getting-started)
+
+<br />
+
+<a href="#-about">
+  <img src="https://img.shields.io/badge/ByteBites-%23E23744?style=for-the-badge&labelColor=1a1a1a" alt="ByteBites brand"/>
+</a>
 
 </div>
 
