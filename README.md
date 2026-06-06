@@ -914,13 +914,7 @@ See also: [RabbitMQ & AWS Setup Guide (PDF)](https://drive.google.com/file/d/1zC
 
 ---
 
-## 🙏 Acknowledgements
 
-- Tutorial: [Small Town Coder — Zomato Clone (25+ hrs)](https://www.youtube.com/watch?v=79F36yYEDyo)
-- Maps: [OpenStreetMap](https://www.openstreetmap.org/) · [Leaflet](https://leafletjs.com/)
-- Icons: [React Icons](https://react-icons.github.io/react-icons/)
-
----
 
 <div align="center">
 
