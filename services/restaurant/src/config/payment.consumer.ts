@@ -1,6 +1,7 @@
 import axios from "axios";
 import Order from "../models/Order.js";
 import { getChannel } from "./rabbitmq.js";
+import { couponEngine } from "../coupon/CouponEngine.js";
 
 export const startPaymentConsumer = async () => {
   const channel = getChannel();
@@ -39,6 +40,10 @@ export const startPaymentConsumer = async () => {
       if (!order) {
         channel.ack(msg);
         return;
+      }
+
+      if (order.couponId) {
+        await couponEngine.recordUsage(order.couponId);
       }
 
       console.log("✅Order Placed:", order._id);

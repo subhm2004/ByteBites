@@ -7,6 +7,8 @@ import { IMenuItem } from "../models/MenuItems.js";
 import Order from "../models/Order.js";
 import Restaurant, { IRestaurant } from "../models/Restaurant.js";
 import { publishEvent } from "../config/order.publisher.js";
+import { couponEngine } from "../coupon/CouponEngine.js";
+import { CouponError } from "../coupon/errors/CouponError.js";
 
 export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
   const user = req.user;
@@ -16,7 +18,7 @@ export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
     });
   }
 
-  const { paymentMethod, addressId } = req.body;
+  const { paymentMethod, addressId, couponCode } = req.body;
 
   if (!addressId) {
     return res.status(400).json({
@@ -118,7 +120,29 @@ export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
 
   const deliveryFee = subtotal < 250 ? 49 : 0;
   const platfromFee = 7;
-  const totalAmount = subtotal + deliveryFee + platfromFee;
+
+  let discountAmount = 0;
+  let appliedCouponCode: string | null = null;
+  let appliedCouponId: string | null = null;
+
+  if (couponCode) {
+    try {
+      const discount = await couponEngine.apply(String(couponCode), {
+        subtotal,
+        userId: user._id.toString(),
+      });
+      discountAmount = discount.discountAmount;
+      appliedCouponCode = discount.couponCode;
+      appliedCouponId = discount.couponId;
+    } catch (error) {
+      if (error instanceof CouponError) {
+        return res.status(error.statusCode).json({ message: error.message });
+      }
+      throw error;
+    }
+  }
+
+  const totalAmount = subtotal - discountAmount + deliveryFee + platfromFee;
 
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
@@ -137,6 +161,9 @@ export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
     subtotal,
     deliveryFee,
     platfromFee,
+    discountAmount,
+    couponCode: appliedCouponCode,
+    couponId: appliedCouponId,
     totalAmount,
     addressId: address._id.toString(),
     deliveryAddress: {

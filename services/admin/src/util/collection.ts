@@ -11,3 +11,9 @@ export const getRiderCollection = async () => {
 
   return db.collection("riders");
 };
+
+export const getCouponCollection = async () => {
+  const db = await connectDb();
+
+  return db.collection("coupons");
+};

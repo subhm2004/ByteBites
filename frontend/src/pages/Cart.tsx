@@ -130,12 +130,12 @@ const Cart = () => {
                 <h3 className="truncate font-semibold text-gray-900 dark:text-white">
                   {item.name}
                 </h3>
-                <p className="text-sm text-gray-500">₹{item.price} each</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">₹{item.price} each</p>
 
                 <div className="mt-2 flex items-center gap-2">
                   <button
                     type="button"
-                    className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-gray-50 transition hover:bg-gray-100 disabled:opacity-50"
+                    className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-gray-50 transition hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
                     disabled={isLoading}
                     onClick={() => decreaseQty(item._id)}
                   >
@@ -145,12 +145,12 @@ const Cart = () => {
                       <BiMinus size={14} />
                     )}
                   </button>
-                  <span className="min-w-[1.5rem] text-center font-bold">
+                  <span className="min-w-[1.5rem] text-center font-bold text-gray-900 dark:text-white">
                     {cartItem.quauntity}
                   </span>
                   <button
                     type="button"
-                    className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E23744]/30 bg-red-50 text-[#E23744] transition hover:bg-red-100 disabled:opacity-50"
+                    className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E23744]/30 bg-red-50 text-[#E23744] transition hover:bg-red-100 disabled:opacity-50 dark:border-[#E23744]/40 dark:bg-red-950/40 dark:hover:bg-red-950/60"
                     disabled={isLoading}
                     onClick={() => increaseQty(item._id)}
                   >
@@ -166,34 +166,44 @@ const Cart = () => {
           );
         })}
 
-        <AppCard className="space-y-3">
+        <AppCard className="space-y-4">
           <h3 className="font-bold text-gray-900 dark:text-white">Bill details</h3>
 
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between text-gray-600">
+          <div className="space-y-2.5 rounded-xl bg-gray-50 p-4 text-sm dark:bg-gray-800/60">
+            <div className="flex justify-between text-gray-600 dark:text-gray-400">
               <span>Items ({quauntity})</span>
-              <span>₹{subTotal}</span>
+              <span className="font-medium text-gray-900 dark:text-gray-100">
+                ₹{subTotal}
+              </span>
             </div>
-            <div className="flex justify-between text-gray-600">
+            <div className="flex justify-between text-gray-600 dark:text-gray-400">
               <span>Delivery fee</span>
-              <span className={deliveryFee === 0 ? "font-medium text-emerald-600" : ""}>
+              <span
+                className={
+                  deliveryFee === 0
+                    ? "font-semibold text-emerald-600 dark:text-emerald-400"
+                    : "font-medium text-gray-900 dark:text-gray-100"
+                }
+              >
                 {deliveryFee === 0 ? "FREE" : `₹${deliveryFee}`}
               </span>
             </div>
-            <div className="flex justify-between text-gray-600">
+            <div className="flex justify-between text-gray-600 dark:text-gray-400">
               <span>Platform fee</span>
-              <span>₹{platfromFee}</span>
+              <span className="font-medium text-gray-900 dark:text-gray-100">
+                ₹{platfromFee}
+              </span>
             </div>
           </div>
 
           {subTotal < 250 && (
-            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
               Add ₹{250 - subTotal} more for free delivery 🎉
             </p>
           )}
 
-          <div className="flex justify-between border-t border-gray-100 dark:border-gray-800 pt-3 text-lg font-black">
-            <span>Total</span>
+          <div className="flex justify-between border-t border-gray-100 pt-3 text-lg font-black dark:border-gray-800">
+            <span className="text-gray-900 dark:text-white">Total</span>
             <span className="text-[#E23744]">₹{grandTotal}</span>
           </div>
 

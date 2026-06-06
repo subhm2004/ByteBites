@@ -102,6 +102,8 @@ export interface IOrder {
   subtotal: number;
   deliveryFee: number;
   platfromFee: number;
+  discountAmount?: number;
+  couponCode?: string | null;
   totalAmount: number;
 
   addressId: string;

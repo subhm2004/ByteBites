@@ -20,6 +20,9 @@ export interface IOrder extends Document {
   subtotal: number;
   deliveryFee: number;
   platfromFee: number;
+  discountAmount: number;
+  couponCode?: string | null;
+  couponId?: string | null;
   totalAmount: number;
 
   addressId: string;
@@ -98,6 +101,18 @@ const OrderSchema = new Schema<IOrder>(
     subtotal: Number,
     deliveryFee: Number,
     platfromFee: Number,
+    discountAmount: {
+      type: Number,
+      default: 0,
+    },
+    couponCode: {
+      type: String,
+      default: null,
+    },
+    couponId: {
+      type: String,
+      default: null,
+    },
     totalAmount: Number,
 
     addressId: {

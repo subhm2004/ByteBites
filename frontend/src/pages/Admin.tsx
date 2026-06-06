@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { adminService } from "../main";
 import AdminRestaurantCard from "../components/AdminRestaurantCard";
 import RiderAdmin from "../components/RiderAdmin";
+import AdminCouponPanel from "../components/AdminCouponPanel";
 import type { IRider, IRestaurant } from "../types";
 import {
   AppCard,
@@ -13,11 +14,13 @@ import {
   RoleShell,
 } from "../components/ui/AppUI";
 
+type AdminTab = "restaurant" | "rider" | "coupons";
+
 const Admin = () => {
   const [restaurant, setRestaurant] = useState<IRestaurant[]>([]);
   const [riders, setRiders] = useState<IRider[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"restaurant" | "rider">("restaurant");
+  const [tab, setTab] = useState<AdminTab>("restaurant");
 
   const fetchData = async () => {
     try {
@@ -64,8 +67,8 @@ const Admin = () => {
     <RoleShell>
       <PageHeader
         eyebrow="Admin"
-        title="Verification dashboard"
-        subtitle="Review and approve pending restaurants & riders"
+        title="Admin dashboard"
+        subtitle="Verify partners and manage discount coupons"
       />
 
       <AppCard className="mb-6 !p-2">
@@ -73,16 +76,17 @@ const Admin = () => {
           tabs={[
             { key: "restaurant", label: `Restaurants (${restaurant.length})` },
             { key: "rider", label: `Riders (${riders.length})` },
+            { key: "coupons", label: "Coupons" },
           ]}
           active={tab}
-          onChange={(k) => setTab(k as "restaurant" | "rider")}
+          onChange={(k) => setTab(k as AdminTab)}
         />
       </AppCard>
 
       {tab === "restaurant" && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {restaurant.length === 0 ? (
-            <div className="col-span-full max-w-lg mx-auto w-full">
+            <div className="col-span-full mx-auto w-full max-w-lg">
               <EmptyState
                 variant="success"
                 emoji="🎉"
@@ -105,7 +109,7 @@ const Admin = () => {
       {tab === "rider" && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {riders.length === 0 ? (
-            <div className="col-span-full max-w-lg mx-auto w-full">
+            <div className="col-span-full mx-auto w-full max-w-lg">
               <EmptyState
                 variant="success"
                 emoji="🎉"
@@ -120,6 +124,8 @@ const Admin = () => {
           )}
         </div>
       )}
+
+      {tab === "coupons" && <AdminCouponPanel />}
     </RoleShell>
   );
 };

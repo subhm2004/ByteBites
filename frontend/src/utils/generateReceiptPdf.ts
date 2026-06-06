@@ -98,9 +98,22 @@ export function downloadOrderReceipt(
     ["Platform fee", order.platfromFee],
   ];
 
+  if (order.discountAmount && order.discountAmount > 0) {
+    totals.push([
+      `Discount${order.couponCode ? ` (${order.couponCode})` : ""}`,
+      -order.discountAmount,
+    ]);
+  }
+
   totals.forEach(([label, amount]) => {
     doc.text(label, margin, y);
-    doc.text(formatMoney(amount), pageWidth - margin, y, { align: "right" });
+    const prefix = amount < 0 ? "- Rs. " : "Rs. ";
+    doc.text(
+      `${prefix}${Math.abs(amount).toFixed(2)}`,
+      pageWidth - margin,
+      y,
+      { align: "right" }
+    );
     y += 7;
   });
 

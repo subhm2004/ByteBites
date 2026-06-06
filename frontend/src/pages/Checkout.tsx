@@ -5,12 +5,13 @@ import { restaurantService, utilsService } from "../main";
 import { Link, useNavigate } from "react-router-dom";
 import type { ICart, IMenuItem, IRestaurant } from "../types";
 import toast from "react-hot-toast";
-import { BiCreditCard, BiLoader, BiMapPin } from "react-icons/bi";
+import { BiCreditCard, BiLoader, BiMapPin, BiTag } from "react-icons/bi";
 import { loadStripe } from "@stripe/stripe-js";
 import type { RazorpaySuccessResponse } from "../types/razorpay";
 import {
   AppButton,
   AppCard,
+  AppInput,
   AppPage,
   EmptyState,
   PageHeader,
@@ -20,6 +21,15 @@ interface Address {
   _id: string;
   formattedAddress: string;
   mobile: number;
+}
+
+interface AppliedCoupon {
+  couponCode: string;
+  discountAmount: number;
+  description: string;
+  deliveryFee: number;
+  platformFee: number;
+  totalAmount: number;
 }
 
 const Checkout = () => {
@@ -33,6 +43,9 @@ const Checkout = () => {
   const [loadingRazorpay, setLoadingRazorpay] = useState(false);
   const [loadingStripe, setLoadingStripe] = useState(false);
   const [creatingOrder, setCreatingOrder] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
 
   useEffect(() => {
     const fetchAddresses = async () => {
@@ -81,9 +94,56 @@ const Checkout = () => {
   }
 
   const restaurant = cart[0].restaurantId as IRestaurant;
-  const deliveryFee = subTotal < 250 ? 49 : 0;
-  const platformFee = 7;
-  const grandTotal = subTotal + deliveryFee + platformFee;
+  const deliveryFee = appliedCoupon?.deliveryFee ?? (subTotal < 250 ? 49 : 0);
+  const platformFee = appliedCoupon?.platformFee ?? 7;
+  const discountAmount = appliedCoupon?.discountAmount ?? 0;
+  const grandTotal =
+    appliedCoupon?.totalAmount ??
+    subTotal + deliveryFee + platformFee;
+
+  const applyCoupon = async () => {
+    if (!couponInput.trim()) {
+      toast.error("Enter a coupon code");
+      return;
+    }
+
+    setValidatingCoupon(true);
+    try {
+      const { data } = await axios.post(
+        `${restaurantService}/api/coupon/validate`,
+        { code: couponInput.trim(), subtotal: subTotal },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      setAppliedCoupon({
+        couponCode: data.couponCode,
+        discountAmount: data.discountAmount,
+        description: data.description,
+        deliveryFee: data.deliveryFee,
+        platformFee: data.platformFee,
+        totalAmount: data.totalAmount,
+      });
+      toast.success(data.description || "Coupon applied!");
+    } catch (error) {
+      setAppliedCoupon(null);
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        toast.error(String(error.response.data.message));
+      } else {
+        toast.error("Invalid coupon");
+      }
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput("");
+  };
 
   const createOrder = async (paymentMethod: "razorpay" | "stripe") => {
     if (!selectedAddressId) return null;
@@ -95,6 +155,7 @@ const Checkout = () => {
         {
           paymentMethod,
           addressId: selectedAddressId,
+          couponCode: appliedCoupon?.couponCode || undefined,
         },
         {
           headers: {
@@ -104,8 +165,12 @@ const Checkout = () => {
       );
 
       return data;
-    } catch {
-      toast.error("Failed to create Order");
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        toast.error(String(error.response.data.message));
+      } else {
+        toast.error("Failed to create Order");
+      }
     } finally {
       setCreatingOrder(false);
     }
@@ -221,44 +286,100 @@ const Checkout = () => {
           </div>
 
           {loadingAddress ? (
-            <p className="py-4 text-center text-sm text-gray-500">
+            <p className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
               Loading addresses...
             </p>
           ) : addresses.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center">
-              <BiMapPin className="mx-auto mb-2 h-8 w-8 text-gray-300" />
-              <p className="text-sm text-gray-500">No address saved yet</p>
+            <div className="rounded-xl border border-dashed border-gray-200 p-6 text-center dark:border-gray-700">
+              <BiMapPin className="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No address saved yet
+              </p>
               <Link to="/address">
                 <AppButton className="mt-4 w-auto px-6">Add address</AppButton>
               </Link>
             </div>
           ) : (
             <div className="space-y-2">
-              {addresses.map((add) => (
-                <label
-                  key={add._id}
-                  className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition ${
-                    selectedAddressId === add._id
-                      ? "border-[#E23744] bg-red-50/50 ring-1 ring-[#E23744]/20"
-                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    className="mt-1 accent-[#E23744]"
-                    checked={selectedAddressId === add._id}
-                    onChange={() => setselectedAddressId(add._id)}
-                  />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {add.formattedAddress}
-                    </p>
-                    <p className="mt-0.5 text-xs text-gray-500">
-                      📞 {add.mobile}
-                    </p>
-                  </div>
-                </label>
-              ))}
+              {addresses.map((add) => {
+                const selected = selectedAddressId === add._id;
+                return (
+                  <label
+                    key={add._id}
+                    className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition ${
+                      selected
+                        ? "border-[#E23744] bg-red-50/60 ring-1 ring-[#E23744]/20 dark:border-[#E23744]/70 dark:bg-red-950/25 dark:ring-[#E23744]/30"
+                        : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800/60 dark:hover:border-gray-600 dark:hover:bg-gray-800"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      className="mt-1 accent-[#E23744]"
+                      checked={selected}
+                      onChange={() => setselectedAddressId(add._id)}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold leading-snug text-gray-900 dark:text-white">
+                        {add.formattedAddress}
+                      </p>
+                      <p className="mt-1 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                        <BiMapPin className="h-3.5 w-3.5 shrink-0 text-[#E23744] dark:text-[#ff6b7a]" />
+                        {add.mobile}
+                      </p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </AppCard>
+
+        <AppCard className="space-y-3">
+          <div className="flex items-center gap-2">
+            <BiTag className="h-5 w-5 text-[#E23744]" />
+            <h3 className="font-bold text-gray-900 dark:text-white">
+              Apply coupon
+            </h3>
+          </div>
+
+          {appliedCoupon ? (
+            <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/50 dark:bg-emerald-950/40">
+              <div>
+                <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
+                  {appliedCoupon.couponCode}
+                </p>
+                <p className="text-xs text-emerald-700 dark:text-emerald-400/80">
+                  {appliedCoupon.description}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={removeCoupon}
+                className="text-xs font-semibold text-red-600 hover:underline dark:text-red-400"
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <AppInput
+                placeholder="Enter coupon code"
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                className="!py-2.5"
+              />
+              <AppButton
+                variant="secondary"
+                className="!w-auto shrink-0 px-5"
+                disabled={validatingCoupon}
+                onClick={applyCoupon}
+              >
+                {validatingCoupon ? (
+                  <BiLoader className="animate-spin" />
+                ) : (
+                  "Apply"
+                )}
+              </AppButton>
             </div>
           )}
         </AppCard>
@@ -270,7 +391,7 @@ const Checkout = () => {
             const item = cartItem.itemId as IMenuItem;
             return (
               <div
-                className="flex justify-between text-sm text-gray-600"
+                className="flex justify-between text-sm text-gray-600 dark:text-gray-400"
                 key={cartItem._id}
               >
                 <span>
@@ -285,23 +406,41 @@ const Checkout = () => {
 
           <hr className="border-gray-100 dark:border-gray-800" />
 
-          <div className="space-y-1.5 text-sm text-gray-600">
-            <div className="flex justify-between">
+          <div className="space-y-2.5 rounded-xl bg-gray-50 p-4 text-sm dark:bg-gray-800/60">
+            <div className="flex justify-between text-gray-600 dark:text-gray-400">
               <span>Subtotal ({quauntity} items)</span>
-              <span>₹{subTotal}</span>
+              <span className="font-medium text-gray-900 dark:text-gray-100">
+                ₹{subTotal}
+              </span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between text-gray-600 dark:text-gray-400">
               <span>Delivery</span>
-              <span>{deliveryFee === 0 ? "Free" : `₹${deliveryFee}`}</span>
+              <span
+                className={
+                  deliveryFee === 0
+                    ? "font-semibold text-emerald-600 dark:text-emerald-400"
+                    : "font-medium text-gray-900 dark:text-gray-100"
+                }
+              >
+                {deliveryFee === 0 ? "Free" : `₹${deliveryFee}`}
+              </span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between text-gray-600 dark:text-gray-400">
               <span>Platform fee</span>
-              <span>₹{platformFee}</span>
+              <span className="font-medium text-gray-900 dark:text-gray-100">
+                ₹{platformFee}
+              </span>
             </div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between font-medium text-emerald-600 dark:text-emerald-400">
+                <span>Coupon discount</span>
+                <span>−₹{discountAmount}</span>
+              </div>
+            )}
           </div>
 
-          <div className="flex justify-between border-t border-gray-100 dark:border-gray-800 pt-3 text-lg font-black">
-            <span>To pay</span>
+          <div className="flex justify-between border-t border-gray-100 pt-3 text-lg font-black dark:border-gray-800">
+            <span className="text-gray-900 dark:text-white">To pay</span>
             <span className="text-[#E23744]">₹{grandTotal}</span>
           </div>
         </AppCard>
@@ -309,7 +448,7 @@ const Checkout = () => {
         <AppCard className="space-y-3">
           <h3 className="font-bold text-gray-900 dark:text-white">Pay securely</h3>
           {!selectedAddressId && (
-            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
               Select a delivery address to enable payment
             </p>
           )}

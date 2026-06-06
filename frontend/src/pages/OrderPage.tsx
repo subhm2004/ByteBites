@@ -180,10 +180,16 @@ const OrderPage = () => {
             <span>Delivery fee</span>
             <span>₹{order.deliveryFee}</span>
           </div>
-          <div className="flex justify-between text-gray-600">
+          <div className="flex justify-between text-gray-600 dark:text-gray-300">
             <span>Platform fee</span>
             <span>₹{order.platfromFee}</span>
           </div>
+          {(order.discountAmount ?? 0) > 0 && (
+            <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+              <span>Coupon {order.couponCode ? `(${order.couponCode})` : ""}</span>
+              <span>−₹{order.discountAmount}</span>
+            </div>
+          )}
           <div className="flex justify-between border-t border-gray-100 dark:border-gray-800 pt-2 font-bold">
             <span>Total paid</span>
             <span>₹{order.totalAmount}</span>
