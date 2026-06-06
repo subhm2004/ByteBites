@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import type { IMenuItem, IRestaurant } from "../types";
 import axios from "axios";
 import { restaurantService } from "../main";
+import { useAppData } from "../context/useAppData";
+import { getDistanceKm } from "../utils/eta";
 import RestaurantProfile from "../components/RestaurantProfile";
 import MenuItems from "../components/MenuItems";
 import RestaurantReviews from "../components/RestaurantReviews";
@@ -10,6 +12,7 @@ import { AppCard, AppPage, LoadingScreen, PageHeader } from "../components/ui/Ap
 
 const RestaurantPage = () => {
   const { id } = useParams();
+  const { location } = useAppData();
 
   const [restaurant, setRestaurant] = useState<IRestaurant | null>(null);
   const [menuItems, setMenuItems] = useState<IMenuItem[]>([]);
@@ -58,6 +61,17 @@ const RestaurantPage = () => {
     }
   }, [id]);
 
+  const distanceKm = useMemo(() => {
+    if (!restaurant || !location?.latitude || !location?.longitude) return undefined;
+    const [resLng, resLat] = restaurant.autoLocation.coordinates;
+    return getDistanceKm(
+      location.latitude,
+      location.longitude,
+      resLat,
+      resLng
+    );
+  }, [restaurant, location]);
+
   if (loading) {
     return <LoadingScreen message="Loading restaurant..." />;
   }
@@ -77,6 +91,7 @@ const RestaurantPage = () => {
           restaurant={restaurant}
           onUpdate={setRestaurant}
           isSeller={false}
+          distanceKm={distanceKm}
         />
 
         <div>

@@ -3,18 +3,25 @@ import type { IRestaurant } from "../types";
 import axios from "axios";
 import { restaurantService } from "../main";
 import toast from "react-hot-toast";
-import { BiEdit, BiMapPin, BiSave, BiStar } from "react-icons/bi";
+import { BiEdit, BiMapPin, BiSave, BiStar, BiTime } from "react-icons/bi";
 import { useAppData } from "../context/useAppData";
 import { getErrorMessage } from "../utils/errors";
+import { formatETARange, estimateETA } from "../utils/eta";
 import { AppButton } from "./ui/AppUI";
 
 interface props {
   restaurant: IRestaurant;
   isSeller: boolean;
   onUpdate: (restaurant: IRestaurant) => void;
+  distanceKm?: number;
 }
 
-const RestaurantProfile = ({ restaurant, isSeller, onUpdate }: props) => {
+const RestaurantProfile = ({
+  restaurant,
+  isSeller,
+  onUpdate,
+  distanceKm,
+}: props) => {
   const [editMode, setEditMode] = useState(false);
   const [name, setName] = useState(restaurant.name);
   const [description, setDescription] = useState(restaurant.description);
@@ -125,6 +132,12 @@ const RestaurantProfile = ({ restaurant, isSeller, onUpdate }: props) => {
                   ? `${restaurant.avgRating?.toFixed(1)} · ${restaurant.reviewCount} ratings`
                   : "New · no ratings yet"}
               </span>
+              {distanceKm != null && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-sm font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
+                  <BiTime />
+                  {formatETARange(estimateETA(distanceKm))}
+                </span>
+              )}
             </div>
 
             <div className="mt-2 flex items-start gap-2 text-sm text-gray-500 dark:text-gray-400">

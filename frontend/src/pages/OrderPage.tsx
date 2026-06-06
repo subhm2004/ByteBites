@@ -15,6 +15,8 @@ import {
 import DownloadReceiptButton from "../components/DownloadReceiptButton";
 import ReviewModal from "../components/ReviewModal";
 import { MdDeliveryDining } from "react-icons/md";
+import { BiTime } from "react-icons/bi";
+import { getDistanceKm, getOrderETA } from "../utils/eta";
 
 const OrderPage = () => {
   const { id } = useParams();
@@ -141,6 +143,20 @@ const OrderPage = () => {
   const isLive =
     order.status === "rider_assigned" || order.status === "picked_up";
 
+  const riderToCustomerKm =
+    riderLocation &&
+    order.deliveryAddress.latitude != null &&
+    order.deliveryAddress.longitude != null
+      ? getDistanceKm(
+          riderLocation[0],
+          riderLocation[1],
+          order.deliveryAddress.latitude,
+          order.deliveryAddress.longitude
+        )
+      : null;
+
+  const orderEta = getOrderETA(order, riderToCustomerKm);
+
   return (
     <AppPage narrow>
       {showReview && order && (
@@ -172,6 +188,22 @@ const OrderPage = () => {
             ₹{order.totalAmount}
           </p>
         </AppCard>
+
+        {order.status !== "cancelled" && order.status !== "delivered" && (
+          <AppCard className="flex items-center gap-3 !py-4">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
+              <BiTime className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                Delivery estimate
+              </p>
+              <p className="font-bold text-gray-900 dark:text-white">
+                {orderEta.label}
+              </p>
+            </div>
+          </AppCard>
+        )}
 
         {isLive && (
           <AppCard className="!p-0 overflow-hidden">

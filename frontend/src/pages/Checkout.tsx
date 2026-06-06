@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAppData } from "../context/useAppData";
 import axios from "axios";
 import { restaurantService, utilsService } from "../main";
 import { Link, useNavigate } from "react-router-dom";
 import type { ICart, IMenuItem, IRestaurant } from "../types";
 import toast from "react-hot-toast";
-import { BiCreditCard, BiLoader, BiMapPin, BiTag } from "react-icons/bi";
+import { BiCreditCard, BiLoader, BiMapPin, BiTag, BiTime } from "react-icons/bi";
+import { getDistanceKm, formatETAShort, estimateETA } from "../utils/eta";
 import { loadStripe } from "@stripe/stripe-js";
 import type { RazorpaySuccessResponse } from "../types/razorpay";
 import {
@@ -21,6 +22,9 @@ interface Address {
   _id: string;
   formattedAddress: string;
   mobile: number;
+  location?: {
+    coordinates: [number, number];
+  };
 }
 
 interface AppliedCoupon {
@@ -77,7 +81,22 @@ const Checkout = () => {
 
   const navigate = useNavigate();
 
-  if (!cart || cart.length === 0) {
+  const restaurant = (cart?.[0]?.restaurantId as IRestaurant | undefined) ?? null;
+
+  const deliveryEta = useMemo(() => {
+    if (!selectedAddressId || !restaurant?.autoLocation?.coordinates) return null;
+
+    const selected = addresses.find((a) => a._id === selectedAddressId);
+    const coords = selected?.location?.coordinates;
+    if (!coords) return null;
+
+    const [delLng, delLat] = coords;
+    const [resLng, resLat] = restaurant.autoLocation.coordinates;
+    const distanceKm = getDistanceKm(delLat, delLng, resLat, resLng);
+    return estimateETA(distanceKm);
+  }, [selectedAddressId, addresses, restaurant]);
+
+  if (!cart || cart.length === 0 || !restaurant) {
     return (
       <AppPage narrow>
         <EmptyState
@@ -93,7 +112,6 @@ const Checkout = () => {
     );
   }
 
-  const restaurant = cart[0].restaurantId as IRestaurant;
   const deliveryFee = appliedCoupon?.deliveryFee ?? (subTotal < 250 ? 49 : 0);
   const platformFee = appliedCoupon?.platformFee ?? 7;
   const discountAmount = appliedCoupon?.discountAmount ?? 0;
@@ -274,6 +292,20 @@ const Checkout = () => {
       />
 
       <div className="space-y-5">
+        {deliveryEta && (
+          <div className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 dark:border-blue-900/50 dark:bg-blue-950/40">
+            <BiTime className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+            <div>
+              <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">
+                Estimated delivery {formatETAShort(deliveryEta)}
+              </p>
+              <p className="text-xs text-blue-700/80 dark:text-blue-400/80">
+                Based on distance + prep time ({deliveryEta.min}–{deliveryEta.max} min range)
+              </p>
+            </div>
+          </div>
+        )}
+
         <AppCard>
           <div className="mb-3 flex items-center justify-between">
             <h3 className="font-bold text-gray-900 dark:text-white">Delivery address</h3>

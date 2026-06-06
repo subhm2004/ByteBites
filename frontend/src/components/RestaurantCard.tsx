@@ -1,12 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { BiChevronRight, BiStar, BiTime } from "react-icons/bi";
 import { MdDeliveryDining } from "react-icons/md";
+import { estimateETA, formatETARange } from "../utils/eta";
 
 type props = {
   id: string;
   image: string;
   name: string;
-  distance: string;
+  distanceKm: number;
   isOpen: boolean;
   avgRating?: number;
   reviewCount?: number;
@@ -17,13 +18,14 @@ const RestaurantCard = ({
   id,
   image,
   name,
-  distance,
+  distanceKm,
   isOpen,
   avgRating = 0,
   reviewCount = 0,
   featured = false,
 }: props) => {
   const navigate = useNavigate();
+  const eta = formatETARange(estimateETA(distanceKm));
 
   return (
     <div
@@ -69,7 +71,7 @@ const RestaurantCard = ({
             </span>
             <span className="flex items-center gap-0.5">
               <BiTime />
-              25–35 min
+              {eta}
             </span>
           </div>
         </div>
@@ -82,7 +84,7 @@ const RestaurantCard = ({
           </span>
           <span>
             <span className="block font-semibold text-gray-800 dark:text-gray-200">
-              {distance} km away
+              {distanceKm} km away
             </span>
             <span>Free delivery over ₹250</span>
           </span>
