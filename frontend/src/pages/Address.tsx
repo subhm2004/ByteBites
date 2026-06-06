@@ -11,7 +11,7 @@ import toast from "react-hot-toast";
 import { restaurantService } from "../main";
 import "../utils/leafletDefaultIcon";
 import { LuLocateFixed } from "react-icons/lu";
-import { BiLoader, BiPlus, BiTrash } from "react-icons/bi";
+import { BiLoader, BiMapPin, BiPlus, BiTrash } from "react-icons/bi";
 import { getErrorMessage } from "../utils/errors";
 import {
   AppButton,
@@ -65,7 +65,7 @@ const LocateMeButton = ({
     <button
       type="button"
       onClick={locateUser}
-      className="absolute right-3 top-3 z-[1000] flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium shadow-lg transition hover:bg-gray-50"
+      className="absolute right-3 top-3 z-[1000] flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-lg transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
     >
       <LuLocateFixed size={16} className="text-[#E23744]" />
       Use current location
@@ -203,7 +203,7 @@ const AddAddressPage = () => {
         </AppCard>
 
         {formattedAddress && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800/50 dark:bg-emerald-950/40 dark:text-emerald-300">
             📍 {formattedAddress}
           </div>
         )}
@@ -221,28 +221,42 @@ const AddAddressPage = () => {
         </AppButton>
 
         <div className="space-y-3 pt-2">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
             Saved addresses
           </h2>
 
           {loading ? (
             <LoadingScreen message="Loading..." />
           ) : addresses.length === 0 ? (
-            <p className="text-sm text-gray-400">No addresses saved yet</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500">
+              No addresses saved yet
+            </p>
           ) : (
             addresses.map((addr) => (
-              <AppCard key={addr._id} className="flex items-start justify-between gap-3 !p-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">
+              <div
+                key={addr._id}
+                className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm shadow-gray-200/40 transition hover:border-[#E23744]/15 dark:border-gray-800 dark:bg-gray-900 dark:shadow-none dark:hover:border-[#E23744]/25"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#E23744]/10 to-orange-500/10 text-[#E23744] dark:from-[#E23744]/20 dark:to-orange-500/10 dark:text-[#ff6b7a]">
+                  <BiMapPin className="h-5 w-5" />
+                </span>
+
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold leading-snug text-gray-900 dark:text-white">
                     {addr.formattedAddress}
                   </p>
-                  <p className="mt-1 text-xs text-gray-500">📞 {addr.mobile}</p>
+                  <p className="mt-1.5 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    <span className="text-[#E23744] dark:text-[#ff6b7a]">📞</span>
+                    {addr.mobile}
+                  </p>
                 </div>
+
                 <button
                   type="button"
                   onClick={() => deleteAddress(addr._id)}
                   disabled={deletingId === addr._id}
-                  className="rounded-lg p-2 text-red-500 transition hover:bg-red-50 disabled:opacity-50"
+                  className="shrink-0 rounded-xl border border-transparent p-2.5 text-red-500 transition hover:border-red-200 hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:border-red-900/50 dark:hover:bg-red-950/40"
+                  aria-label="Delete address"
                 >
                   {deletingId === addr._id ? (
                     <BiLoader size={16} className="animate-spin" />
@@ -250,7 +264,7 @@ const AddAddressPage = () => {
                     <BiTrash size={16} />
                   )}
                 </button>
-              </AppCard>
+              </div>
             ))
           )}
         </div>

@@ -224,6 +224,113 @@ export const fetchRestaurantOrders = TryCatch(
   }
 );
 
+export const getRestaurantSalesAnalytics = TryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const user = req.user;
+    const { restaurantId } = req.params;
+
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!restaurantId) {
+      return res.status(400).json({ message: "Restaurant id is required" });
+    }
+
+    const restaurant = await Restaurant.findById(restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ message: "Restaurant not found" });
+    }
+
+    if (restaurant.ownerId !== user._id.toString()) {
+      return res.status(403).json({ message: "Not your restaurant" });
+    }
+
+    const orders = await Order.find({
+      restaurantId,
+      paymentStatus: "paid",
+    }).sort({ createdAt: -1 });
+
+    const now = new Date();
+    const daily: {
+      label: string;
+      date: string;
+      revenue: number;
+      orders: number;
+    }[] = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const dayStart = new Date(now);
+      dayStart.setDate(dayStart.getDate() - i);
+      dayStart.setHours(0, 0, 0, 0);
+
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+
+      const dayOrders = orders.filter((order) => {
+        const created = new Date(order.createdAt);
+        return created >= dayStart && created < dayEnd;
+      });
+
+      daily.push({
+        label: dayStart.toLocaleDateString("en-IN", { weekday: "short" }),
+        date: dayStart.toISOString().slice(0, 10),
+        revenue: dayOrders.reduce((sum, order) => sum + order.subtotal, 0),
+        orders: dayOrders.length,
+      });
+    }
+
+    const totalRevenue = orders.reduce((sum, order) => sum + order.subtotal, 0);
+    const deliveredOrders = orders.filter(
+      (order) => order.status === "delivered"
+    ).length;
+
+    const itemTotals = new Map<
+      string,
+      { name: string; quantity: number; revenue: number }
+    >();
+
+    for (const order of orders) {
+      for (const item of order.items) {
+        const key = item.itemId || item.name;
+        const existing = itemTotals.get(key) || {
+          name: item.name,
+          quantity: 0,
+          revenue: 0,
+        };
+        existing.quantity += item.quauntity;
+        existing.revenue += item.price * item.quauntity;
+        itemTotals.set(key, existing);
+      }
+    }
+
+    const topItems = [...itemTotals.values()]
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+
+    return res.json({
+      summary: {
+        totalRevenue,
+        totalOrders: orders.length,
+        deliveredOrders,
+        averageOrderValue: orders.length
+          ? Math.round(totalRevenue / orders.length)
+          : 0,
+      },
+      daily,
+      topItems,
+      statusBreakdown: {
+        delivered: deliveredOrders,
+        active: orders.filter(
+          (order) => !["delivered", "cancelled"].includes(order.status)
+        ).length,
+        cancelled: orders.filter((order) => order.status === "cancelled")
+          .length,
+      },
+    });
+  }
+);
+
 const ALLOWED_STATUSES = ["accepted", "preparing", "ready_for_rider"] as const;
 
 export const updateOrderStatus = TryCatch(

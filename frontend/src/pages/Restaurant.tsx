@@ -7,6 +7,7 @@ import RestaurantProfile from "../components/RestaurantProfile";
 import MenuItems from "../components/MenuItems";
 import AddMenuItem from "../components/AddMenuItem";
 import RestaurantOrders from "../components/RestaurantOrders";
+import SalesAnalytics from "../components/SalesAnalytics";
 import {
   AppCard,
   AppTabs,
@@ -130,11 +131,7 @@ const Restaurant = () => {
               <AddMenuItem onItemAdded={() => fetchMenuItems(restaurant._id)} />
             )}
             {tab === "sales" && (
-              <div className="py-12 text-center">
-                <span className="text-4xl">📊</span>
-                <p className="mt-3 font-semibold text-gray-700 dark:text-gray-200">Sales analytics</p>
-                <p className="text-sm text-gray-400 dark:text-gray-500">Coming soon</p>
-              </div>
+              <SalesAnalytics restaurantId={restaurant._id} />
             )}
           </div>
         </AppCard>

@@ -8,6 +8,7 @@ import {
   fetchSingleOrder,
   getCurrentOrderForRider,
   getMyOrders,
+  getRestaurantSalesAnalytics,
   updateOrderStatus,
   updateOrderStatusRider,
 } from "../controllers/order.js";
@@ -15,6 +16,12 @@ import {
 const router = express.Router();
 
 router.get("/myorder", isAuth, getMyOrders);
+router.get(
+  "/analytics/:restaurantId",
+  isAuth,
+  isSeller,
+  getRestaurantSalesAnalytics
+);
 router.get("/:id", isAuth, fetchSingleOrder);
 router.post("/new", isAuth, createOrder);
 router.get("/payment/:id", fetchOrderForPayment);
