@@ -10,16 +10,10 @@
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![RabbitMQ](https://img.shields.io/badge/RabbitMQ-CloudAMQP-FF6600?logo=rabbitmq&logoColor=white)](https://www.rabbitmq.com/)
 [![Socket.IO](https://img.shields.io/badge/Socket.IO-4.8-010101?logo=socket.io&logoColor=white)](https://socket.io/)
-[![License](https://img.shields.io/badge/License-Educational-blue)](#)
 
-**Microservices · Real-time tracking · Dual payments · Role-based dashboards**
+**Microservices · Real-time tracking · Coupon engine · Dynamic ETA · Role-based dashboards**
 
-[Features](#-features) ·
-[Ports](#-service-ports) ·
-[Architecture](#-system-architecture) ·
-[Flows](#-core-flows) ·
-[Setup](#-getting-started--complete-setup-guide) ·
-[Docs](#-documentation)
+[About](#-about) · [Features](#-complete-feature-list) · [Architecture](#-system-design-hld) · [Coupon Engine](#-coupon--discount-engine-lld) · [Dynamic ETA](#-dynamic-eta-system) · [Setup](#-getting-started)
 
 <br />
 
@@ -31,640 +25,790 @@
 
 ## 📖 About
 
-**ByteBites** is a full-stack food delivery web application built with a **microservices architecture**. It connects **customers**, **restaurant partners**, **delivery riders**, and **platform admins** in a single ecosystem — similar to Zomato or Swiggy.
+**ByteBites** is a full-stack food delivery web application built with a **microservices architecture**. It connects **customers**, **restaurant partners (sellers)**, **delivery riders**, and **platform admins** in one ecosystem — similar to Zomato or Swiggy.
 
-Unlike typical college monolith projects, this system uses **6 independent backend services**, **RabbitMQ** for async messaging, **Socket.IO** for live updates, **MongoDB Atlas** for cloud data, and **Razorpay + Stripe** for payments.
+Unlike a typical college monolith, this project uses:
 
-> Built following the [Small Town Coder — Zomato Clone Tutorial](https://www.youtube.com/watch?v=79F36yYEDyo) with a polished landing page and production-style patterns.
+- **6 independent backend microservices**
+- **RabbitMQ** for async payment & dispatch messaging
+- **Socket.IO** for live order updates & rider tracking
+- **MongoDB Atlas** with geospatial indexes
+- **Razorpay + Stripe** dual payment gateways
+- **Design patterns** in the coupon engine (Strategy, Factory, Facade, Repository)
+- **Rule-based Dynamic ETA** across browse, checkout, and live tracking
+
+> Repo folder: `TOMATO` · Product brand: **ByteBites** · DB: `Zomato_Clone`
 
 ---
 
-## ✨ Features
+## 📑 Table of Contents
+
+1. [Complete Feature List](#-complete-feature-list)
+2. [System Design (HLD)](#-system-design-hld)
+3. [Microservices Breakdown](#-microservices-breakdown)
+4. [Coupon & Discount Engine (LLD)](#-coupon--discount-engine-lld)
+5. [Dynamic ETA System](#-dynamic-eta-system)
+6. [Reviews & Ratings](#-reviews--ratings)
+7. [Smart Rider Dispatch](#-smart-rider-dispatch)
+8. [Real-Time Events (Socket.IO)](#-real-time-events-socketio)
+9. [RabbitMQ Message Flows](#-rabbitmq-message-flows)
+10. [Order Lifecycle](#-order-lifecycle)
+11. [Admin Dashboard](#-admin-dashboard)
+12. [Database Collections](#-database-collections)
+13. [API Reference](#-api-reference)
+14. [Tech Stack](#-tech-stack)
+15. [Project Structure](#-project-structure)
+16. [Getting Started](#-getting-started)
+17. [Environment Variables](#-environment-variables)
+18. [Additional Docs](#-additional-docs)
+
+---
+
+## ✨ Complete Feature List
 
 ### 👤 Customer
-- Google OAuth sign-in
-- Browse nearby restaurants (geospatial queries)
-- Search, cart, saved addresses
-- Checkout with **Razorpay** (INR) or **Stripe** (global)
-- **Live order tracking** on Leaflet map
-- Real-time status updates via WebSocket
+
+| Feature | Description |
+|---------|-------------|
+| Google OAuth login | JWT session (15 days) via Auth service |
+| Role selection | Customer / Seller / Rider on first login |
+| Landing page | Marketing site at `/` — hero, iPhone mockup, FAQ, testimonials |
+| Explore nearby restaurants | `$geoNear` query within ~5 km radius |
+| Search & category filter | Search by name; category chips filter name/description |
+| **Dynamic ETA on cards** | Delivery time calculated from distance (not hardcoded) |
+| Restaurant page | Menu, ratings badge, customer reviews section |
+| Cart | Single-restaurant cart enforced; qty +/- |
+| Saved addresses | Leaflet map picker + Nominatim geocoding |
+| Checkout | Address select, **coupon apply**, fee breakdown, **ETA preview** |
+| Dual payments | Razorpay (INR/UPI) + Stripe (international) |
+| Order history | All paid orders with status badges |
+| Live order tracking | Leaflet map + OSRM route + rider GPS dot |
+| **Status-aware ETA** | Countdown updates as order progresses |
+| Post-delivery reviews | Rate restaurant + delivery partner (stars + comment) |
+| PDF receipt download | jsPDF receipt for paid orders |
+| Dark / light theme | Theme toggle across app |
+| Ban enforcement | Suspended users blocked at login |
 
 ### 🏪 Restaurant (Seller)
-- Restaurant & menu CRUD with **Cloudinary** images
-- Open / close toggle
-- Live incoming orders with **sound notification**
-- Order status workflow (placed → preparing → ready)
+
+| Feature | Description |
+|---------|-------------|
+| Restaurant onboarding | Name, description, image (Cloudinary), geo location |
+| Open / close toggle | Control visibility to customers |
+| Edit profile | Update name & description |
+| Menu management | **Add, edit, delete** items with image upload |
+| Item availability toggle | Mark items available/unavailable |
+| Live incoming orders | Socket `order:new` + sound alert (quack.mp3) |
+| Order workflow | `placed → accepted → preparing → ready_for_rider` |
+| **Seller cancel order** | Cancel from `placed`, `accepted`, `preparing` |
+| Sales analytics dashboard | Revenue, daily chart (Recharts), top items, status breakdown |
+| Real-time order updates | Socket events on status changes |
 
 ### 🛵 Delivery Rider
-- Profile registration with document upload
-- Online / offline availability toggle
-- GPS location updates
-- Accept nearby orders (500m radius matching)
-- Map navigation & delivery status updates
+
+| Feature | Description |
+|---------|-------------|
+| Profile registration | Photo, phone, Aadhar, driving license, GPS |
+| Admin verification gate | Must be verified before going online |
+| Online / offline toggle | Live GPS update on toggle |
+| **Smart sequential dispatch** | Nearest rider offered first (10s window each) |
+| Incoming order alerts | Socket + sound (faaah.mp3) |
+| Accept & deliver | Map with OSRM routing |
+| Live GPS broadcast | Customer sees rider on map in real time |
+| Status updates | `picked_up → delivered` |
+| **Earnings dashboard** | Today / week / all-time + 7-day chart |
+| **Trip history** | Past deliveries with route map snapshots |
+| Rider rating display | Avg stars from customer reviews |
 
 ### 🛡️ Admin
-- View pending restaurants & riders
-- One-click verification (`isVerified`)
 
-### 🌐 Landing Page
-- Premium marketing site at `/`
-- Animated hero, iPhone mockup, category carousel
-- Features, how-it-works, reviews, FAQ
-- App experience at `/explore` after login
+| Feature | Description |
+|---------|-------------|
+| **Users tab** | List users, ban/unban (cannot ban self) |
+| **Restaurants tab** | Verify pending restaurant partners |
+| **Riders tab** | Verify pending delivery riders |
+| **Coupons tab** | Full coupon CRUD — create, edit, toggle, delete |
+| Direct MongoDB access | No inter-service HTTP — fast admin ops |
+
+---
+
+## 🏗 System Design (HLD)
+
+### High-Level Architecture
+
+```mermaid
+flowchart TB
+    subgraph Client
+        FE[React Frontend :5173]
+    end
+
+    subgraph Microservices
+        AUTH[Auth :5007]
+        REST[Restaurant :5001]
+        UTILS[Utils :5002]
+        RT[Realtime :5004]
+        RIDER[Rider :5005]
+        ADMIN[Admin :5006]
+    end
+
+    subgraph Infra
+        MONGO[(MongoDB Atlas\nZomato_Clone)]
+        RMQ[RabbitMQ]
+    end
+
+    subgraph External
+        GOOGLE[Google OAuth]
+        CLOUD[Cloudinary]
+        RAZOR[Razorpay]
+        STRIPE[Stripe]
+        OSRM[OSRM Routing]
+    end
+
+    FE --> AUTH & REST & UTILS & RT & RIDER & ADMIN
+    AUTH & REST & RIDER --> MONGO
+    ADMIN --> MONGO
+    REST --> RMQ
+    UTILS --> RMQ
+    RIDER --> RMQ
+    REST & RIDER & UTILS --> RT
+    REST --> UTILS
+    RIDER --> REST
+    FE --> GOOGLE & OSRM
+    UTILS --> CLOUD & RAZOR & STRIPE
+```
+
+### Design Principles Used
+
+| Principle | Where |
+|-----------|-------|
+| **Microservices** | 6 independent services, each owns a domain |
+| **Async messaging** | Payment confirmation decoupled via RabbitMQ |
+| **Event-driven** | Socket.IO pushes live updates to clients |
+| **Geospatial queries** | MongoDB `2dsphere` for restaurants, riders, addresses |
+| **Internal service auth** | `x-internal-key` header for service-to-service calls |
+| **Strategy pattern** | Pluggable discount algorithms in coupon engine |
+| **Facade pattern** | Single `CouponEngine.apply()` entry point |
+| **Repository pattern** | Data access abstracted in `CouponRepository` |
+| **TTL index** | Unpaid orders auto-expire after 15 minutes |
+
+### Service Communication
+
+```
+Customer Browser
+    │
+    ├── REST ──► Auth / Restaurant / Utils / Rider / Admin
+    ├── WebSocket ──► Realtime (JWT auth)
+    └── Internal emit ──► Realtime (rider GPS from frontend)
+
+Restaurant Service
+    ├── HTTP ──► Utils (image upload)
+    ├── HTTP ──► Realtime (socket emit)
+    ├── HTTP ──► Rider Service (rating sync)
+    ├── RabbitMQ publish ──► order_ready_queue
+    └── RabbitMQ consume ◄── payment_event
+
+Rider Service
+    ├── HTTP ──► Restaurant (assign order, update status, earnings)
+    ├── HTTP ──► Realtime (notify riders)
+    ├── HTTP ──► Utils (image upload)
+    └── RabbitMQ consume ◄── order_ready_queue
+
+Utils Service
+    ├── HTTP ──► Restaurant (fetch order for payment)
+    └── RabbitMQ publish ──► payment_event
+
+Admin Service
+    └── Direct MongoDB (no HTTP to other services)
+```
+
+---
+
+## 🔧 Microservices Breakdown
+
+| Port | Service | Responsibility |
+|------|---------|----------------|
+| **5173** | Frontend | React SPA — all role UIs, maps, charts |
+| **5007** | Auth | Google OAuth, JWT, roles, ban check |
+| **5001** | Restaurant | Restaurants, menu, cart, orders, addresses, coupons, reviews |
+| **5002** | Utils | Cloudinary upload, Razorpay + Stripe, payment events |
+| **5004** | Realtime | Socket.IO server + internal HTTP emit API |
+| **5005** | Rider | Profiles, availability, dispatch consumer, earnings |
+| **5006** | Admin | User management, verification, coupon CRUD |
+
+**Shared database:** `Zomato_Clone` on MongoDB Atlas (all services except Admin use Mongoose; Admin uses native driver).
+
+---
+
+## 🎟 Coupon & Discount Engine (LLD)
+
+The coupon engine lives in `services/restaurant/src/coupon/` and is a textbook example of **clean architecture with design patterns**.
+
+### Class Diagram (LLD)
+
+```mermaid
+classDiagram
+    class CouponEngine {
+        -repository: CouponRepository
+        -validator: CouponValidator
+        +apply(code, context) DiscountResult
+        +recordUsage(couponId) void
+    }
+
+    class CouponRepository {
+        +findByCode(code) ICouponData
+        +incrementUsage(couponId) void
+    }
+
+    class CouponValidator {
+        +validate(coupon, context) void
+        -assertActive()
+        -assertNotExpired()
+        -assertMinOrder()
+        -assertUsageLimit()
+        -assertPerUserLimit()
+    }
+
+    class DiscountStrategyFactory {
+        +getStrategy(type) DiscountStrategy
+    }
+
+    class DiscountStrategy {
+        <<interface>>
+        +calculate(subtotal, coupon) number
+    }
+
+    class FlatDiscountStrategy {
+        +calculate(subtotal, coupon) number
+    }
+
+    class PercentWithCapStrategy {
+        +calculate(subtotal, coupon) number
+    }
+
+    class CouponError {
+        +message: string
+        +statusCode: number
+    }
+
+    CouponEngine --> CouponRepository
+    CouponEngine --> CouponValidator
+    CouponEngine --> DiscountStrategyFactory
+    DiscountStrategyFactory --> DiscountStrategy
+    DiscountStrategy <|.. FlatDiscountStrategy
+    DiscountStrategy <|.. PercentWithCapStrategy
+    CouponValidator --> CouponError
+    CouponEngine --> CouponError
+```
+
+### Design Patterns
+
+| Pattern | Implementation | Purpose |
+|---------|---------------|---------|
+| **Facade** | `CouponEngine` | Single `apply()` method hides complexity of repo + validation + strategy |
+| **Strategy** | `DiscountStrategy` interface | Swap discount algorithm without changing engine code |
+| **Factory** | `DiscountStrategyFactory` | Returns correct strategy by `coupon.type` |
+| **Repository** | `CouponRepository` | Abstracts MongoDB queries for coupons |
+| **Validator (Chain)** | `CouponValidator` | Sequential eligibility checks with early throw |
+| **Custom Error** | `CouponError` | Typed errors with HTTP status codes |
+
+### Coupon Types
+
+| Type | Algorithm | Example |
+|------|-----------|---------|
+| `flat` | `min(value, subtotal)` | `FLAT50` → ₹50 off |
+| `percent_cap` | `(subtotal × value / 100)` capped by `maxDiscount` | `SAVE20` → 20% off, max ₹100 |
+
+### Validation Rules
+
+Before applying any discount, `CouponValidator` checks:
+
+1. **Active** — `isActive === true`
+2. **Not expired** — `expiresAt > now`
+3. **Min order** — `subtotal >= minOrderAmount`
+4. **Global usage limit** — `usedCount < usageLimit` (if set)
+5. **Per-user limit** — counts paid orders with same `couponId` for this user
+
+### End-to-End Coupon Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Customer (Checkout)
+    participant R as Restaurant Service
+    participant CE as CouponEngine
+    participant DB as MongoDB
+    participant U as Utils Service
+    participant Q as RabbitMQ
+
+    C->>R: POST /api/coupon/validate { code, subtotal }
+    R->>CE: apply(code, context)
+    CE->>DB: findByCode(code)
+    CE->>CE: validate(coupon, context)
+    CE->>CE: strategy.calculate(subtotal)
+    CE-->>R: { discountAmount, fees, total }
+    R-->>C: Preview discount + updated total
+
+    C->>R: POST /api/order/new { couponCode, ... }
+    R->>CE: apply() again at order creation
+    R->>DB: Save order (paymentStatus: pending)
+
+    C->>U: POST /api/payment/create (Razorpay/Stripe)
+    U->>U: Verify payment
+    U->>Q: Publish PAYMENT_SUCCESS
+    Q->>R: Consume payment event
+    R->>DB: paymentStatus = paid
+    R->>CE: recordUsage(couponId)
+    R->>R: Socket emit order:new → seller
+```
+
+### Fee Calculation (with coupon)
+
+```
+Subtotal        = sum of (item.price × quantity)
+Delivery fee    = ₹49 if subtotal < ₹250, else ₹0
+Platform fee    = ₹7
+Discount        = coupon engine result
+Total           = subtotal + delivery + platform - discount
+Rider payout    = ceil(distance_km) × ₹17
+```
+
+---
+
+## ⏱ Dynamic ETA System
+
+Implemented in `frontend/src/utils/eta.ts` — a **rule-based ETA engine** (Level 1) using Haversine distance.
+
+### Formula
+
+```
+Travel time  = (distance_km ÷ 22 km/h) × 60 minutes
+Total ETA    = 15 min prep + travel time + 5 min buffer
+Display range = [total − 5, total + 5] clamped to [20, 60] min
+```
+
+### Constants
+
+| Constant | Value | Reason |
+|----------|-------|--------|
+| `AVG_RIDER_SPEED_KMH` | 22 | City traffic average |
+| `BASE_PREP_MINUTES` | 15 | Kitchen prep time |
+| `ETA_BUFFER_MINUTES` | 5 | Safety margin |
+| `MIN_ETA_MINUTES` | 20 | Never show too low |
+| `MAX_ETA_MINUTES` | 60 | Cap for far orders |
+
+### Where ETA Appears
+
+| Screen | Logic |
+|--------|-------|
+| **Explore cards** | `estimateETA(distanceKm)` from user → restaurant Haversine |
+| **Restaurant page** | Blue ETA badge next to ratings |
+| **Checkout** | Updates when delivery address selected |
+| **Order tracking** | `getOrderETA()` — status-aware countdown |
+
+### Status-Aware ETA (Live Tracking)
+
+| Order Status | ETA Logic |
+|--------------|-----------|
+| `placed` / `accepted` | Full estimated range |
+| `preparing` | ~70% of midpoint remaining |
+| `ready_for_rider` | Travel time + 8 min (rider assigning) |
+| `rider_assigned` | Travel time + 6 min |
+| `picked_up` | Live Haversine rider → customer (if GPS available) |
+| `delivered` | "Delivered" |
+| `cancelled` | "Order cancelled" |
+
+---
+
+## ⭐ Reviews & Ratings
+
+### Restaurant Reviews
+- Customer rates 1–5 stars + optional comment after delivery
+- Stored in `reviews` collection (one per order)
+- Restaurant `avgRating` and `reviewCount` auto-recalculated via MongoDB aggregation
+- Displayed on restaurant page and explore cards
+
+### Rider Reviews
+- Customer rates delivery partner separately (if rider assigned)
+- Stored in `riderreviews` collection
+- Rider `avgRating` synced to Rider service via internal API
+- Displayed on rider dashboard profile
+
+### API Endpoints
+```
+POST   /api/review                          — submit review(s)
+GET    /api/review/my                       — user's past reviews
+GET    /api/review/restaurant/:restaurantId — restaurant reviews + avg
+GET    /api/review/rider/:riderId           — rider reviews + avg
+```
+
+---
+
+## 🛵 Smart Rider Dispatch
+
+When seller marks order `ready_for_rider`:
+
+```mermaid
+sequenceDiagram
+    participant S as Seller
+    participant R as Restaurant Service
+    participant Q as RabbitMQ
+    participant RD as Rider Service
+    participant RT as Realtime
+    participant Rider as Rider App
+
+    S->>R: PUT status = ready_for_rider
+    R->>Q: Publish ORDER_READY_FOR_RIDER
+    Q->>RD: Consume event
+    RD->>RD: $geoNear — riders within 500m, sorted by distance
+    RD->>RT: Emit order:available → nearest rider (10s)
+    alt Rider accepts within 10s
+        Rider->>RD: POST accept
+        RD->>R: Assign rider to order
+    else Timeout
+        RD->>RT: Emit order:available → next nearest rider
+    end
+```
+
+**Key improvement over broadcast:** Previously all nearby riders got the alert simultaneously. Now riders are offered **one at a time, nearest first**, with a **10-second accept window** each.
+
+---
+
+## 📡 Real-Time Events (Socket.IO)
+
+**Connection:** Frontend connects to Realtime service with JWT in `handshake.auth.token`.
+
+**Auto-join rooms on connect:**
+- `user:{userId}` — all users
+- `restaurant:{restaurantId}` — sellers (if JWT contains restaurantId)
+
+| Event | Emitted By | Room | Frontend Listener |
+|-------|-----------|------|-------------------|
+| `order:new` | Restaurant (payment success) | `restaurant:{id}` | Seller orders panel |
+| `order:update` | Restaurant (status change) | `user:{customerId}` | Orders, OrderPage |
+| `order:rider_assigned` | Restaurant (rider assign/status) | `user:{customerId}`, `restaurant:{id}` | Orders, OrderPage, Seller |
+| `order:available` | Rider dispatch consumer | `user:{riderUserId}` | RiderDashboard |
+| `rider:location` | Rider frontend → internal emit | `user:{customerUserId}` | OrderPage map |
+
+**Internal emit API:** `POST /api/v1/internal/emit` with `x-internal-key` header.
+
+---
+
+## 🐰 RabbitMQ Message Flows
+
+| Queue | Env Variable | Publisher | Consumer | Event | Effect |
+|-------|-------------|-----------|----------|-------|--------|
+| `payment_event` | `PAYMENT_QUEUE` | Utils | Restaurant | `PAYMENT_SUCCESS` | Mark paid, increment coupon, notify seller |
+| `order_ready_queue` | `ORDER_READY_QUEUE` | Restaurant | Rider | `ORDER_READY_FOR_RIDER` | Sequential rider dispatch |
+| `rider_queue` | `RIDER_QUEUE` | — | — | — | Reserved (asserted, unused) |
+
+### Why RabbitMQ for Payments?
+
+Payment gateway callbacks are async and can retry. Publishing to a queue ensures:
+- Payment service responds fast to the gateway
+- Restaurant service processes confirmation at its own pace
+- Failed processing can be retried without losing the payment event
+
+---
+
+## 📦 Order Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> placed: Customer pays
+    placed --> accepted: Seller accepts
+    placed --> cancelled: Seller cancels
+    accepted --> preparing: Seller starts cooking
+    accepted --> cancelled: Seller cancels
+    preparing --> ready_for_rider: Food ready
+    preparing --> cancelled: Seller cancels
+    ready_for_rider --> rider_assigned: Rider accepts
+    rider_assigned --> picked_up: Rider picks up
+    picked_up --> delivered: Rider delivers
+    delivered --> [*]
+    cancelled --> [*]
+```
+
+**Unpaid orders:** TTL index on `expiresAt` — auto-deleted after 15 minutes if payment not completed.
+
+---
+
+## 🛡️ Admin Dashboard
+
+Access: Set `role: "admin"` manually in MongoDB `users` collection.
+
+### Tabs
+
+| Tab | Features |
+|-----|----------|
+| **Users** | List up to 100 users, ban/unban, shows `(You)` for logged-in admin, self-ban blocked |
+| **Restaurants** | Pending verification list, one-click verify |
+| **Riders** | Pending verification list, one-click verify |
+| **Coupons** | Create, list, toggle active/inactive, delete |
+
+### Coupon Management (Admin Panel)
+
+Admin can create coupons with:
+
+| Field | Description |
+|-------|-------------|
+| `code` | Unique coupon code (e.g. `SAVE20`) |
+| `type` | `flat` or `percent_cap` |
+| `value` | ₹ amount (flat) or percentage (percent_cap) |
+| `maxDiscount` | Cap for percentage coupons |
+| `minOrderAmount` | Minimum cart value required |
+| `usageLimit` | Global max uses (optional) |
+| `perUserLimit` | Max uses per customer |
+| `expiresAt` | Expiry date |
+| `description` | Display text |
+| `isActive` | Toggle on/off without deleting |
+
+Admin writes directly to MongoDB `coupons` collection — the Restaurant service's `CouponEngine` reads from the same collection at apply time.
+
+---
+
+## 🗄 Database Collections
+
+| Collection | Service | Key Fields |
+|------------|---------|------------|
+| `users` | Auth, Admin | name, email, role, isBanned |
+| `restaurants` | Restaurant | name, ownerId, autoLocation (2dsphere), isOpen, isVerified, avgRating |
+| `menuitems` | Restaurant | restaurantId, name, price, image, isAvailable |
+| `carts` | Restaurant | userId, restaurantId, itemId, quauntity |
+| `addresses` | Restaurant | userId, formattedAddress, location (2dsphere) |
+| `orders` | Restaurant | items, fees, coupon, status, payment, rider, distance, expiresAt |
+| `riders` | Rider | userId, documents, location (2dsphere), isVerified, avgRating |
+| `reviews` | Restaurant | userId, restaurantId, orderId (unique), rating |
+| `riderreviews` | Restaurant | userId, riderId, orderId (unique), rating |
+| `coupons` | Restaurant, Admin | code, type, value, limits, expiresAt, isActive |
+
+---
+
+## 📡 API Reference
+
+### Auth — `:5007/api/auth`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/login` | — | Google OAuth login |
+| PUT | `/add/role` | JWT | Assign role (customer/seller/rider) |
+| GET | `/me` | JWT | Current user profile |
+
+### Restaurant — `:5001`
+
+| Prefix | Key Routes |
+|--------|-----------|
+| `/api/restaurant` | POST `/new`, GET `/my`, GET `/all`, PUT `/status`, PUT `/edit`, GET `/:id` |
+| `/api/item` | POST `/new`, GET `/all/:id`, PUT `/:itemId`, DELETE `/:itemId`, PUT `/status/:itemId` |
+| `/api/cart` | POST `/add`, GET `/all`, PUT `/inc`, PUT `/dec`, DELETE `/clear` |
+| `/api/address` | POST `/new`, GET `/all`, DELETE `/:id` |
+| `/api/order` | POST `/new`, GET `/myorder`, GET `/:id`, PUT `/:orderId`, GET `/analytics/:restaurantId` |
+| `/api/coupon` | POST `/validate` |
+| `/api/review` | POST `/`, GET `/my`, GET `/restaurant/:id`, GET `/rider/:id` |
+
+**Internal routes** (require `x-internal-key`):
+- `GET /api/order/payment/:id`
+- `PUT /api/order/assign/rider`
+- `GET /api/order/current/rider`
+- `PUT /api/order/update/status/rider`
+- `GET /api/order/rider/earnings`
+- `GET /api/order/rider/dispatch/:orderId`
+
+### Utils — `:5002`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/upload` | Cloudinary image upload |
+| POST | `/api/payment/create` | Create Razorpay order |
+| POST | `/api/payment/verify` | Verify Razorpay payment |
+| POST | `/api/payment/stripe/create` | Create Stripe session |
+| POST | `/api/payment/stripe/verify` | Verify Stripe payment |
+
+### Realtime — `:5004`
+
+| Type | Path | Description |
+|------|------|-------------|
+| WebSocket | Socket.IO | JWT-authenticated connection |
+| POST | `/api/v1/internal/emit` | Internal event broadcast |
+
+### Rider — `:5005/api/rider`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/new` | Register rider profile |
+| GET | `/myprofile` | Get rider profile |
+| GET | `/earnings` | Earnings + trip history |
+| PATCH | `/toggle` | Online/offline + GPS |
+| POST | `/accept/:orderId` | Accept delivery |
+| GET | `/order/current` | Active delivery |
+| PUT | `/order/update/:orderId` | Update delivery status |
+| PATCH | `/internal/rating` | Sync rating (internal) |
+
+### Admin — `:5006/api/v1`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/admin/users` | List users |
+| PATCH | `/admin/users/:id/status` | Ban/unban user |
+| GET | `/admin/restaurant/pending` | Pending restaurants |
+| PATCH | `/verify/restaurant/:id` | Verify restaurant |
+| GET | `/admin/rider/pending` | Pending riders |
+| PATCH | `/verify/rider/:id` | Verify rider |
+| GET | `/admin/coupons` | List all coupons |
+| POST | `/admin/coupon` | Create coupon |
+| PATCH | `/admin/coupon/:id` | Update coupon |
+| PATCH | `/admin/coupon/:id/toggle` | Toggle active |
+| DELETE | `/admin/coupon/:id` | Delete coupon |
 
 ---
 
 ## 🛠 Tech Stack
 
-### Frontend (`frontend/` — Port **5173**)
+### Frontend
+React 19 · TypeScript · Vite 7 · Tailwind CSS 4 · React Router 7 · Axios · Socket.IO Client · Leaflet + OSRM · Recharts · jsPDF · react-hot-toast · Google OAuth · Stripe.js
 
-| Technology | Purpose |
-|------------|---------|
-| **React 19** + **TypeScript** | UI & type safety |
-| **Vite 7** | Dev server & bundler |
-| **Tailwind CSS 4** | Styling |
-| **React Router 7** | SPA routing & protected routes |
-| **Axios** | REST API calls |
-| **Socket.IO Client** | Real-time events |
-| **Leaflet + React-Leaflet** | Maps & live tracking |
-| **@react-oauth/google** | Google login |
-| **@stripe/stripe-js** | Stripe checkout |
-| **react-hot-toast** | Notifications |
+### Backend (each service)
+Node.js · Express 5 · TypeScript · Mongoose 9 · amqplib · jsonwebtoken · multer · axios
 
-### Backend Microservices (`services/`)
-
-| Technology | Purpose |
-|------------|---------|
-| **Node.js** + **Express 5** | HTTP APIs |
-| **TypeScript** | Type-safe services |
-| **Mongoose 9** | MongoDB ODM |
-| **jsonwebtoken** | JWT auth (15-day expiry) |
-| **googleapis** | Google OAuth token exchange |
-| **amqplib** | RabbitMQ messaging |
-| **socket.io** | WebSocket server |
-| **Cloudinary** | Image CDN |
-| **Razorpay + Stripe SDKs** | Payment processing |
-
-### Infrastructure & External Services
-
-| Service | Role |
-|---------|------|
-| **MongoDB Atlas** | Cloud database (`Zomato_Clone`) |
-| **CloudAMQP** | Managed RabbitMQ |
-| **Google Cloud Console** | OAuth 2.0 credentials |
-| **OpenStreetMap / Nominatim** | Map tiles & geocoding |
-| **Vercel** (optional) | Frontend deployment |
-| **Render** (optional) | Backend deployment |
-
----
-
-## 🔌 Service Ports
-
-Local development mein har service ka default port:
-
-| Port | Service | Folder | Base URL | Main routes |
-|------|---------|--------|----------|-------------|
-| **5173** | **Frontend** (React + Vite) | `frontend/` | [http://localhost:5173](http://localhost:5173) | `/` landing · `/explore` app · `/login` |
-| **5007** | **Auth** | `services/auth/` | `http://localhost:5007` | `/api/auth/*` — Google login, JWT, roles |
-| **5001** | **Restaurant** | `services/restaurant/` | `http://localhost:5001` | `/api/restaurant` · `/api/cart` · `/api/order` · `/api/address` |
-| **5002** | **Utils** | `services/utils/` | `http://localhost:5002` | `/api/upload` · `/api/payment` — Cloudinary, Razorpay, Stripe |
-| **5004** | **Realtime** | `services/realtime/` | `http://localhost:5004` | WebSocket (Socket.IO) · `/api/v1/internal/emit` |
-| **5005** | **Rider** | `services/rider/` | `http://localhost:5005` | `/api/rider/*` — profile, accept order, GPS |
-| **5006** | **Admin** | `services/admin/` | `http://localhost:5006` | `/api/v1/*` — verify restaurants & riders |
-
-**Infrastructure (not a Node service):**
-
-| Port | Service | Notes |
-|------|---------|-------|
-| **5672** | **RabbitMQ** | Local: `amqp://admin:admin123@localhost:5672` — payment & order queues |
-| — | **MongoDB Atlas** | Cloud — `MONGO_URI` in auth, restaurant, rider, admin `.env` |
-
-> **Auth port 5007 (not 5000):** macOS **AirPlay Receiver** port 5000 block karta hai (403 Forbidden). Isliye Auth **5007** par chalta hai — `frontend/src/main.tsx` aur `services/auth/.env` dono mein yahi set hai.
-
-**Frontend → backend mapping** (`frontend/src/main.tsx`):
-
-```ts
-authService       → http://localhost:5007
-restaurantService → http://localhost:5001
-utilsService      → http://localhost:5002
-realtimeService   → http://localhost:5004
-riderService      → http://localhost:5005
-adminService      → http://localhost:5006
-```
-
----
-
-## 🏗 System Architecture
-
-```mermaid
-flowchart TB
-    subgraph Client["🌐 Browser — React SPA :5173"]
-        FE["Landing · Explore · Cart · Checkout · Tracking"]
-    end
-
-    subgraph Backend["⚙️ Node.js Microservices"]
-        AUTH["Auth :5007<br/><code>/api/auth</code>"]
-        REST["Restaurant :5001<br/><code>/api/restaurant · /cart · /order</code>"]
-        UTILS["Utils :5002<br/><code>/api/upload · /api/payment</code>"]
-        RT["Realtime :5004<br/>WebSocket + internal emit"]
-        RIDER["Rider :5005<br/><code>/api/rider</code>"]
-        ADMIN["Admin :5006<br/><code>/api/v1</code>"]
-    end
-
-    subgraph Data["💾 Data & Messaging"]
-        MONGO[("MongoDB Atlas<br/>Zomato_Clone")]
-        RMQ{{"RabbitMQ<br/>payment_event<br/>order_ready_queue"}}
-    end
-
-    subgraph External["☁️ Third-Party"]
-        GOOGLE["Google OAuth"]
-        CLOUD["Cloudinary"]
-        STRIPE["Stripe"]
-        RAZOR["Razorpay"]
-    end
-
-    FE -->|"HTTP + JWT"| AUTH & REST & UTILS & RIDER & ADMIN
-    FE -->|"WebSocket"| RT
-
-    AUTH --> MONGO
-    REST --> MONGO
-    RIDER --> MONGO
-    ADMIN --> MONGO
-
-    UTILS -->|"publish PAYMENT_SUCCESS"| RMQ
-    REST -->|"consume / publish"| RMQ
-    RIDER -->|"consume ORDER_READY"| RMQ
-
-    AUTH --> GOOGLE
-    UTILS --> CLOUD & STRIPE & RAZOR
-    REST & RIDER -->|"internal HTTP"| RT
-    REST & RIDER --> UTILS
-```
-
-### Service Responsibility Matrix
-
-| Service | Port | Responsibility | Database | Queue |
-|---------|------|----------------|----------|-------|
-| **Auth** | 5007 | Google login, JWT, roles | `users` | — |
-| **Restaurant** | 5001 | Restaurants, menu, cart, orders, addresses | 5 collections | consume + publish |
-| **Utils** | 5002 | Image upload, Razorpay, Stripe | — | publish |
-| **Realtime** | 5004 | Socket.IO rooms & event relay | — | — |
-| **Rider** | 5005 | Rider profile, accept orders, GPS | `riders` | consume |
-| **Admin** | 5006 | Verify restaurants & riders | direct MongoDB | — |
-| **Frontend** | 5173 | React SPA | — | — |
-
-### MongoDB Collections
-
-| Collection | Owner Service | Description |
-|------------|---------------|-------------|
-| `users` | Auth | Google users + roles |
-| `restaurants` | Restaurant, Admin | Seller restaurants + verification |
-| `menuitems` | Restaurant | Food items |
-| `carts` | Restaurant | Shopping carts |
-| `addresses` | Restaurant | GeoJSON delivery addresses |
-| `orders` | Restaurant, Rider | Full order lifecycle |
-| `riders` | Rider, Admin | Delivery partner profiles |
-
----
-
-## 🔄 Core Flows
-
-### 1️⃣ Authentication & Role Selection
-
-```mermaid
-sequenceDiagram
-    actor U as User
-    participant FE as Frontend
-    participant G as Google OAuth
-    participant A as Auth :5007
-    participant DB as MongoDB
-    participant RT as Realtime :5004
-
-    U->>FE: Continue with Google
-    FE->>G: OAuth auth-code flow
-    G-->>FE: Authorization code
-    FE->>A: POST /api/auth/login { code }
-    A->>G: Exchange code + fetch profile
-    A->>DB: Find or create User
-    A-->>FE: JWT (15d) + user JSON
-    FE->>FE: Store token in localStorage
-
-    U->>FE: Select role (customer / seller / rider)
-    FE->>A: PUT /api/auth/add/role + JWT
-    A->>DB: Update user.role
-    A-->>FE: New JWT + user
-
-    FE->>RT: Socket connect { auth: { token } }
-    Note over RT: JWT verified with shared JWT_SEC
-```
-
-### 2️⃣ Customer Order + Payment
-
-```mermaid
-sequenceDiagram
-    actor U as Customer
-    participant FE as Frontend
-    participant R as Restaurant :5001
-    participant U2 as Utils :5002
-    participant PG as Razorpay / Stripe
-    participant Q as RabbitMQ
-    participant RT as Realtime :5004
-
-    U->>FE: Checkout
-    FE->>R: POST /api/order/new (JWT)
-    R-->>FE: orderId, amount
-
-    FE->>U2: POST /api/payment/create
-    U2->>PG: Create payment session
-    U->>PG: Complete payment
-    FE->>U2: POST /api/payment/verify
-    U2->>Q: PAYMENT_SUCCESS event
-
-    Q->>R: payment.consumer
-    R->>R: paymentStatus = paid
-    R->>RT: emit order:new → restaurant room
-    RT-->>FE: Seller hears notification 🔔
-```
-
-### 3️⃣ Rider Dispatch & Live Tracking
-
-```mermaid
-sequenceDiagram
-    participant Seller as Seller UI
-    participant R as Restaurant :5001
-    participant Q as RabbitMQ
-    participant RID as Rider :5005
-    participant RT as Realtime :5004
-    participant Cust as Customer UI
-
-    Seller->>R: PUT status → ready_for_rider
-    R->>Q: ORDER_READY_FOR_RIDER
-    Q->>RID: orderReady.consumer
-    RID->>RID: Find riders within 500m
-    RID->>RT: emit order:available → rider rooms
-
-    Note over RID: Rider accepts order
-    RID->>R: PUT assign rider (internal key)
-    R->>RT: emit order:rider_assigned
-    RT-->>Cust: Live map tracking updates
-```
-
-### Order Status State Machine
-
-```mermaid
-stateDiagram-v2
-    [*] --> placed: Order created (payment pending)
-    placed --> placed: Payment confirmed via RabbitMQ
-    placed --> preparing: Seller accepts
-    preparing --> ready_for_rider: Food ready
-    ready_for_rider --> rider_assigned: Rider accepts
-    rider_assigned --> picked_up: Rider picks up
-    picked_up --> delivered: Delivered to customer
-    delivered --> [*]
-```
-
----
-
-## 📡 Real-time Events (Socket.IO)
-
-| Event | Triggered By | Target Room | UI Effect |
-|-------|--------------|-------------|-----------|
-| `order:new` | Restaurant (after payment) | `restaurant:{id}` | Seller order alert + sound |
-| `order:update` | Restaurant / Rider | `user:{customerId}` | Customer status update |
-| `order:rider_assigned` | Restaurant | customer + restaurant | Rider details shown |
-| `order:available` | Rider service | `user:{riderId}` | New delivery request |
-| `rider:location` | Rider GPS | order tracking | Map dot moves |
-
-**Socket rooms on connect:**
-- Every user → `user:{userId}`
-- Sellers → `restaurant:{restaurantId}`
-
----
-
-## 📬 RabbitMQ Queues
-
-| Queue | Publisher | Consumer | Event Type |
-|-------|-----------|----------|------------|
-| `payment_event` | Utils (after payment verify) | Restaurant | `PAYMENT_SUCCESS` |
-| `order_ready_queue` | Restaurant (food ready) | Rider | `ORDER_READY_FOR_RIDER` |
-| `rider_queue` | — | — | Reserved (not used yet) |
-
-> **Why RabbitMQ?** Payment verification and rider dispatch run **asynchronously** — the HTTP response is not blocked, and services stay decoupled.
+### Infrastructure
+MongoDB Atlas · RabbitMQ (CloudAMQP or Docker) · Cloudinary · Razorpay · Stripe · Google OAuth · OpenStreetMap · Nominatim · OSRM
 
 ---
 
 ## 📁 Project Structure
 
 ```
-ByteBites/
-├── README.md                    ← You are here
-├── ARCHITECTURE.md              ← Detailed Mermaid diagrams
-├── VIVA_DOCUMENTATION.md        ← Full viva / report guide (2000+ lines)
-│
-├── frontend/                    ← React + Vite + TypeScript (:5173)
+TOMATO/
+├── frontend/                    # React SPA (port 5173)
 │   ├── src/
-│   │   ├── pages/               Landing, Explore, Cart, Checkout, Orders…
-│   │   ├── components/          Navbar, carousels, iPhone mockup…
-│   │   ├── context/             AppContext, SocketContext
-│   │   ├── App.tsx              Role-based routing
-│   │   └── main.tsx             Service URLs
-│   └── package.json
+│   │   ├── pages/               # Route pages (Explore, Checkout, Admin, etc.)
+│   │   ├── components/          # UI components (maps, charts, modals)
+│   │   ├── context/             # AppContext, SocketContext, ThemeContext
+│   │   ├── utils/               # eta.ts, errors.ts, orderflow.ts
+│   │   └── types.ts             # Shared TypeScript interfaces
+│   └── vercel.json              # SPA deploy config
 │
-└── services/
-    ├── auth/          :5007     Google OAuth, JWT, roles
-    ├── restaurant/    :5001     Core business logic + RabbitMQ
-    ├── utils/         :5002     Cloudinary + Razorpay + Stripe
-    ├── realtime/      :5004     Socket.IO server
-    ├── rider/         :5005     Delivery partner APIs
-    └── admin/         :5006     Platform moderation
+├── services/
+│   ├── auth/                    # :5007 — Google OAuth, JWT, roles
+│   ├── restaurant/              # :5001 — Core business logic
+│   │   └── src/coupon/          # ★ Discount engine (Strategy, Factory, Facade)
+│   ├── utils/                   # :5002 — Upload, payments, RabbitMQ publish
+│   ├── realtime/                # :5004 — Socket.IO + internal emit
+│   ├── rider/                   # :5005 — Profiles, dispatch consumer
+│   └── admin/                   # :5006 — Direct MongoDB admin ops
+│
+├── ARCHITECTURE.md              # Mermaid architecture diagrams
+├── VIVA_DOCUMENTATION.md        # Viva / interview prep doc
+└── README.md                    # This file
 ```
 
-### Frontend Pages
-
-| Route | Page | Access |
-|-------|------|--------|
-| `/` | Landing (marketing) | Public |
-| `/login` | Google sign-in | Public |
-| `/explore` | Restaurant discovery | Customer |
-| `/restaurant/:id` | Menu & add to cart | Customer |
-| `/cart` | Shopping cart | Customer |
-| `/checkout` | Payment | Customer |
-| `/orders` | Order history | Customer |
-| `/order/:id` | Live tracking map | Customer |
-| `/select-role` | Role picker | New users |
-| Seller UI | `Restaurant.tsx` | Seller role |
-| Rider UI | `RiderDashboard.tsx` | Rider role |
-| Admin UI | `Admin.tsx` | Admin role |
-
 ---
 
-## 🚀 Getting Started — Complete Setup Guide
-
-> **📄 Video/PDF companion:** Step-by-step RabbitMQ + AWS setup ke liye tutorial guide dekho:  
-> [**RabbitMQ & AWS Setup Guide (PDF)**](https://drive.google.com/file/d/1zCPzq7nQPKkq2m4vseQg7CoRVw19m1Cx/view)  
-> Neeche wala guide is project ke hisaab se likha hai — PDF ke saath follow karo for visual walkthrough.
-
----
+## 🚀 Getting Started
 
 ### Prerequisites
 
-| Requirement | Minimum | Recommended |
-|-------------|---------|-------------|
-| **Node.js** | 20+ | 22+ |
-| **npm** | 9+ | Latest |
-| **RAM** | 8 GB | 16 GB |
-| **OS** | Windows 10 / macOS / Linux | macOS or Ubuntu |
-| **Browser** | Chrome (latest) | Chrome + location permission enabled |
-| **Internet** | Required | Required (cloud DB, OAuth, payments) |
-| **Docker** (optional) | — | For local RabbitMQ |
+- **Node.js 20+** and npm 9+
+- **MongoDB Atlas** cluster (free tier works)
+- **RabbitMQ** — local Docker or [CloudAMQP](https://www.cloudamqp.com/) free plan
+- **Google OAuth** credentials ([Google Cloud Console](https://console.cloud.google.com))
+- **Cloudinary** account (free tier)
+- **Razorpay** test keys + **Stripe** test keys
 
-**Accounts to create (all have free tiers):**
-
-| Service | Purpose | Sign up |
-|---------|---------|---------|
-| MongoDB Atlas | Cloud database | [mongodb.com/atlas](https://www.mongodb.com/atlas) |
-| CloudAMQP **or** Docker | RabbitMQ message broker | [cloudamqp.com](https://www.cloudamqp.com/) |
-| Google Cloud Console | OAuth login | [console.cloud.google.com](https://console.cloud.google.com/) |
-| Cloudinary | Restaurant/rider image CDN | [cloudinary.com](https://cloudinary.com/) |
-| Razorpay | INR payments (test mode) | [razorpay.com](https://razorpay.com/) |
-| Stripe | Global payments (test mode) | [stripe.com](https://stripe.com/) |
-
----
-
-### Step 1 — Clone & install dependencies
+### 1. Clone & Install
 
 ```bash
-git clone <your-repo-url>
-cd ByteBites
+git clone <repo-url>
+cd TOMATO
 
 # Frontend
 cd frontend && npm install && cd ..
 
-# All microservices (run from ByteBites root)
+# All backend services
 for dir in auth restaurant utils realtime rider admin; do
   (cd services/$dir && npm install)
 done
 ```
 
----
+### 2. Environment Variables
 
-### Step 2 — MongoDB Atlas setup
+Copy and fill `.env` files for each service (see [Environment Variables](#-environment-variables) section below).
 
-1. [MongoDB Atlas](https://www.mongodb.com/atlas) par account banao.
-2. **Create cluster** → Free **M0** tier choose karo.
-3. **Database Access** → user create karo (username + password note karo).
-4. **Network Access** → **Add IP Address** → `0.0.0.0/0` (development ke liye; production mein restrict karo).
-5. **Connect** → **Drivers** → connection string copy karo:
+**Critical:** `JWT_SEC` and `INTERNAL_SERVICE_KEY` must be **identical** across all services and frontend.
 
-```
-mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/?appName=Cluster0
-```
-
-6. Password mein special characters (`@`, `#`, `%`) ho to URL-encode karo.
-
-**Ye `.env` files mein `MONGO_URI` daalo:**
-
-| File | Variable |
-|------|----------|
-| `services/auth/.env` | `MONGO_URI` |
-| `services/restaurant/.env` | `MONGO_URI` |
-| `services/rider/.env` | `MONGO_URI` |
-| `services/admin/.env` | `MONGO_URI` + `DB_NAME=Zomato_Clone` |
-
-> Admin service native MongoDB driver use karta hai — `DB_NAME` wahi database name hai jahan collections banti hain.
-
----
-
-### Step 3 — RabbitMQ setup
-
-ByteBites **3 queues** use karta hai:
-
-| Queue name | Env variable | Publisher | Consumer | Purpose |
-|------------|--------------|-----------|----------|---------|
-| `payment_event` | `PAYMENT_QUEUE` | Utils | Restaurant | Payment success → order confirm |
-| `order_ready_queue` | `ORDER_READY_QUEUE` | Restaurant | Rider | Order ready → notify nearby riders |
-| `rider_queue` | `RIDER_QUEUE` | — | — | Reserved (future use) |
-
-**Option A — Local Docker (recommended for dev)**
-
-Docker install karo, phir:
+### 3. Start RabbitMQ (Local Docker)
 
 ```bash
 docker run -d --name bytebites-rabbitmq \
-  -p 5672:5672 \
-  -p 15672:15672 \
+  -p 5672:5672 -p 15672:15672 \
   -e RABBITMQ_DEFAULT_USER=admin \
   -e RABBITMQ_DEFAULT_PASS=admin123 \
   rabbitmq:3-management
 ```
 
-- **AMQP URL:** `amqp://admin:admin123@localhost:5672`
-- **Management UI:** [http://localhost:15672](http://localhost:15672) (login: `admin` / `admin123`)
+Management UI: http://localhost:15672 (admin / admin123)
 
-**Option B — CloudAMQP (cloud, no Docker)**
+### 4. Start Services (7 terminals)
 
-1. [cloudamqp.com](https://www.cloudamqp.com/) → free **Little Lemur** plan.
-2. Instance create karo → **AMQP URL** copy karo (usually `amqps://...`).
-3. Ye URL teen services mein same daalo: `restaurant`, `utils`, `rider`.
-
-**Option C — AWS EC2 + Docker (production-style)**
-
-Tutorial PDF mein detail hai: [RabbitMQ & AWS Setup Guide](https://drive.google.com/file/d/1zCPzq7nQPKkq2m4vseQg7CoRVw19m1Cx/view)
-
-Short steps:
-1. AWS EC2 instance launch karo (Ubuntu, t2.micro free tier).
-2. Security group mein port **5672** (AMQP) aur **15672** (management, optional) open karo.
-3. EC2 par Docker install karke same `docker run` command chalao.
-4. `RABBITMQ_URL=amqp://admin:admin123@<EC2_PUBLIC_IP>:5672`
-
-**RabbitMQ env — ye 3 files mein same URL hona chahiye:**
-
-```env
-RABBITMQ_URL=amqp://admin:admin123@localhost:5672   # local Docker
-# RABBITMQ_URL=amqps://user:pass@xxx.rmq.cloudamqp.com/user   # CloudAMQP
-PAYMENT_QUEUE=payment_event
-ORDER_READY_QUEUE=order_ready_queue
-RIDER_QUEUE=rider_queue
-```
-
-| Service | Needs RabbitMQ? |
-|---------|-----------------|
-| `services/utils/.env` | ✅ publish payment events |
-| `services/restaurant/.env` | ✅ consume payment + publish order ready |
-| `services/rider/.env` | ✅ consume order ready |
-
-> **Important:** Restaurant service startup par RabbitMQ connect karta hai — RabbitMQ pehle chalna chahiye, warna restaurant crash ho sakta hai.
-
----
-
-### Step 4 — Google OAuth setup
-
-1. [Google Cloud Console](https://console.cloud.google.com/) → **New Project** (e.g. `tomato-webapp`).
-2. **APIs & Services → OAuth consent screen** → External → app name set karo.
-3. **Credentials → Create Credentials → OAuth client ID** → **Web application**.
-4. **Authorized JavaScript origins** mein add karo:
-   - `http://localhost:5173`
-   - (production: `https://your-domain.vercel.app`)
-5. Client ID aur Client Secret copy karo.
-
-**Backend** — `services/auth/.env`:
-
-```env
-GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=GOCSPX-xxxx
-```
-
-**Frontend** — `frontend/.env`:
-
-```env
-VITE_GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com   # same Client ID as auth
-```
-
-> Dono jagah **same** `GOOGLE_CLIENT_ID` hona chahiye. Mismatch par login fail hoga.
-
----
-
-### Step 5 — Cloudinary setup (image uploads)
-
-1. [cloudinary.com](https://cloudinary.com/) → free account.
-2. Dashboard se **Cloud name**, **API Key**, **API Secret** copy karo.
-
-**`services/utils/.env` only:**
-
-```env
-CLOUD_NAME=your_cloud_name
-CLOUD_API_KEY=your_api_key
-CLOUD_SECRET_KEY=your_api_secret
-```
-
-> Utils service start hote hi ye 3 vars check karta hai — missing hone par crash.
-
----
-
-### Step 6 — Payment gateways (test mode)
-
-#### Razorpay (INR)
-
-1. [dashboard.razorpay.com](https://dashboard.razorpay.com/) → **Test Mode** ON.
-2. **Settings → API Keys** → Key ID + Key Secret.
-
-**`services/utils/.env`:**
-
-```env
-RAZORPAY_KEY_ID=rzp_test_xxxx
-RAZORPAY_KEY_SECRET=xxxx
-```
-
-#### Stripe (international)
-
-1. [dashboard.stripe.com](https://dashboard.stripe.com/) → **Test mode**.
-2. **Developers → API keys** → Publishable + Secret key.
-
-**Backend** — `services/utils/.env`:
-
-```env
-STRIPE_SECRET_KEY=sk_test_xxxx
-```
-
-**Frontend** — `frontend/.env`:
-
-```env
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_xxxx
-```
-
----
-
-### Step 7 — Shared secrets (must match everywhere)
-
-Ye values **sab services mein identical** honi chahiye — warna JWT verify fail ya internal API 403 aayega.
-
-| Secret | Used in | Rule |
-|--------|---------|------|
-| `JWT_SEC` | auth, restaurant, rider, realtime, admin | **Same string** — 64+ char random |
-| `INTERNAL_SERVICE_KEY` | restaurant, utils, realtime, rider + frontend | **Same string** — service-to-service auth |
-
-Generate example (terminal):
+Start in this order:
 
 ```bash
-# JWT secret (64 chars)
-openssl rand -base64 48
+# Terminal 1 — Auth
+cd services/auth && npm run dev          # :5007
 
-# Internal key (custom strong string)
-openssl rand -base64 32
+# Terminal 2 — Utils
+cd services/utils && npm run dev         # :5002
+
+# Terminal 3 — Realtime
+cd services/realtime && npm run dev      # :5004
+
+# Terminal 4 — Restaurant (needs RabbitMQ)
+cd services/restaurant && npm run dev   # :5001
+
+# Terminal 5 — Rider (needs RabbitMQ)
+cd services/rider && npm run dev        # :5005
+
+# Terminal 6 — Admin
+cd services/admin && npm run dev        # :5006
+
+# Terminal 7 — Frontend
+cd frontend && npm run dev              # :5173
 ```
 
-**Frontend internal key** (same value as backend):
+### 5. Create Admin User
 
-```env
-# frontend/.env
-VITE_INTERNAL_SERVICE_KEY=your-internal-service-key
+In MongoDB Atlas shell or Compass:
+
+```javascript
+db.users.updateOne(
+  { email: "your@gmail.com" },
+  { $set: { role: "admin" } }
+)
 ```
 
-| Service file | `JWT_SEC` | `INTERNAL_SERVICE_KEY` |
-|--------------|-----------|------------------------|
-| `services/auth/.env` | ✅ | — |
-| `services/restaurant/.env` | ✅ | ✅ |
-| `services/utils/.env` | — | ✅ |
-| `services/realtime/.env` | ✅ | ✅ |
-| `services/rider/.env` | ✅ | ✅ |
-| `services/admin/.env` | ✅ | — |
-| `frontend/.env` | — | ✅ (`VITE_` prefix) |
+### 6. Open App
+
+- **Landing:** http://localhost:5173
+- **App (after login):** http://localhost:5173/explore
 
 ---
 
-### Step 8 — Complete `.env` templates
+## 🔐 Environment Variables
 
-Har service ke liye `services/<name>/.env` file banao (gitignored — kabhi commit mat karo).
+### Shared (must match across services)
+
+| Variable | Used By |
+|----------|---------|
+| `JWT_SEC` | auth, restaurant, rider, realtime, admin |
+| `INTERNAL_SERVICE_KEY` | restaurant, utils, realtime, rider + `VITE_INTERNAL_SERVICE_KEY` in frontend |
 
 <details>
 <summary><b>Auth</b> — <code>services/auth/.env</code></summary>
 
 ```env
 PORT=5007
-MONGO_URI=mongodb+srv://<user>:<pass>@cluster0.xxxxx.mongodb.net/?appName=Cluster0
+MONGO_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/?appName=Cluster0
 JWT_SEC=your-64-char-jwt-secret-same-in-all-services
-GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=GOCSPX-xxxx
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
 ```
 
 </details>
@@ -674,10 +818,11 @@ GOOGLE_CLIENT_SECRET=GOCSPX-xxxx
 
 ```env
 PORT=5001
-MONGO_URI=mongodb+srv://<user>:<pass>@cluster0.xxxxx.mongodb.net/?appName=Cluster0
+MONGO_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/?appName=Cluster0
 JWT_SEC=your-64-char-jwt-secret-same-in-all-services
 UTILS_SERVICE=http://localhost:5002
 REALTIME_SERVICE=http://localhost:5004
+RIDER_SERVICE=http://localhost:5005
 INTERNAL_SERVICE_KEY=your-internal-service-key
 RABBITMQ_URL=amqp://admin:admin123@localhost:5672
 PAYMENT_QUEUE=payment_event
@@ -723,13 +868,13 @@ INTERNAL_SERVICE_KEY=your-internal-service-key
 
 ```env
 PORT=5005
-MONGO_URI=mongodb+srv://<user>:<pass>@cluster0.xxxxx.mongodb.net/?appName=Cluster0
+MONGO_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/?appName=Cluster0
 JWT_SEC=your-64-char-jwt-secret-same-in-all-services
 UTILS_SERVICE=http://localhost:5002
 REALTIME_SERVICE=http://localhost:5004
 RESTAURANT_SERVICE=http://localhost:5001
 INTERNAL_SERVICE_KEY=your-internal-service-key
-RABBITMQ_URL=amqp://admin:admin123@localhost:5672
+RABBITMQ_URL=amqp://admin:your_password@localhost:5672
 ORDER_READY_QUEUE=order_ready_queue
 RIDER_QUEUE=rider_queue
 ```
@@ -741,7 +886,7 @@ RIDER_QUEUE=rider_queue
 
 ```env
 PORT=5006
-MONGO_URI=mongodb+srv://<user>:<pass>@cluster0.xxxxx.mongodb.net/?appName=Cluster0
+MONGO_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/?appName=Cluster0
 JWT_SEC=your-64-char-jwt-secret-same-in-all-services
 DB_NAME=Zomato_Clone
 ```
@@ -752,174 +897,41 @@ DB_NAME=Zomato_Clone
 <summary><b>Frontend</b> — <code>frontend/.env</code></summary>
 
 ```env
-VITE_GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
+VITE_GOOGLE_CLIENT_ID=your-google-client-id
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_xxxx
 VITE_INTERNAL_SERVICE_KEY=your-internal-service-key
 ```
-
-> Service URLs hardcoded hain `frontend/src/main.tsx` mein — production deploy par wahan update karo.
 
 </details>
 
 ---
 
-### Step 9 — Start services (order matters)
+## 📚 Additional Docs
 
-**Pehle infrastructure**, phir backends, last mein frontend:
-
-```bash
-# 0. RabbitMQ (agar local Docker use kar rahe ho)
-docker start bytebites-rabbitmq   # pehli baar: docker run command from Step 3
-
-# 1. Auth (:5007)
-cd services/auth && npm run dev
-
-# 2. Utils (:5002) — Cloudinary + payments
-cd services/utils && npm run dev
-
-# 3. Realtime (:5004) — Socket.IO
-cd services/realtime && npm run dev
-
-# 4. Restaurant (:5001) — RabbitMQ consumer; isse pehle RabbitMQ chalna chahiye
-cd services/restaurant && npm run dev
-
-# 5. Rider (:5005)
-cd services/rider && npm run dev
-
-# 6. Admin (:5006)
-cd services/admin && npm run dev
-
-# 7. Frontend (:5173)
-cd frontend && npm run dev
-```
-
-**7 terminals** chahiye (RabbitMQ Docker alag se background mein).
+| File | Purpose |
+|------|---------|
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | 12 Mermaid diagrams — system, payment, order, socket flows |
+| [VIVA_DOCUMENTATION.md](./VIVA_DOCUMENTATION.md) | Interview / viva prep — Q&A, formulas, talking points |
 
 ---
 
-### Step 10 — Verify setup
+## 🎓 Viva Talking Points
 
-| Check | How | Expected |
-|-------|-----|----------|
-| Auth | Terminal log | `Server running on port 5007` |
-| MongoDB | Auth/Restaurant startup | `connected to mongodb` |
-| RabbitMQ | Restaurant startup | No connection error |
-| Utils | Terminal | `Server running on port 5002` |
-| Google login | [localhost:5173/login](http://localhost:5173/login) | Google popup → redirect to app |
-| Images | Seller → add restaurant | Image upload works (Cloudinary) |
-| Payment | Checkout → Razorpay test | Test card: `4111 1111 1111 1111` |
-| Socket | Order page open | Real-time status updates |
+1. **Why microservices?** — Independent scaling, fault isolation, team ownership per domain
+2. **Why RabbitMQ for payments?** — Decouple payment gateway callback from order confirmation; retry-safe
+3. **Coupon engine patterns** — Strategy for algorithms, Factory for selection, Facade for single entry, Repository for data access
+4. **Dynamic ETA** — Rule-based (Haversine + speed model); can upgrade to OSRM routing or historical averages
+5. **Smart dispatch** — Sequential nearest-first with timeout; fairer than broadcast-to-all
+6. **Geospatial** — MongoDB `2dsphere` indexes on restaurants, riders, addresses for proximity queries
+7. **Real-time** — Socket.IO rooms per user/restaurant; internal HTTP emit for service-to-service events
+8. **Security** — JWT for client auth, `x-internal-key` for service-to-service, ban enforcement, role-based UI routing
 
 ---
-
-### Step 11 — Open the app
-
-| URL | Description |
-|-----|-------------|
-| [http://localhost:5173](http://localhost:5173) | Landing page |
-| [http://localhost:5173/login](http://localhost:5173/login) | Sign in |
-| [http://localhost:5173/explore](http://localhost:5173/explore) | App (after login) |
-| [http://localhost:15672](http://localhost:15672) | RabbitMQ management UI (local Docker) |
-
----
-
-### Troubleshooting
-
-| Problem | Cause | Fix |
-|---------|-------|-----|
-| Google login 403 / `invalid_client` | Client ID mismatch | `frontend/.env` aur `auth/.env` mein same `GOOGLE_CLIENT_ID` |
-| Auth 403 on port 5000 | macOS AirPlay blocks 5000 | Auth **5007** use karo (already configured) |
-| `Unauthorized` on internal API | `INTERNAL_SERVICE_KEY` mismatch | Sab services + `frontend/.env` mein same key |
-| JWT invalid / 401 everywhere | `JWT_SEC` mismatch | auth, restaurant, rider, realtime, admin — sab same |
-| Restaurant won't start | RabbitMQ not running | Docker start karo ya CloudAMQP URL check karo |
-| Image upload fails | Cloudinary vars missing | `CLOUD_NAME`, `CLOUD_API_KEY`, `CLOUD_SECRET_KEY` in utils |
-| Payment stuck | Utils/Restaurant down | Dono services running + same `INTERNAL_SERVICE_KEY` |
-| `.env` changes not applied | Hot reload doesn't reload env | Service restart karo |
-| MongoDB connection error | IP not whitelisted | Atlas → Network Access → `0.0.0.0/0` add karo |
-
----
-
-## 🔐 Security Model
-
-| Layer | Mechanism |
-|-------|-----------|
-| **User auth** | Google OAuth 2.0 → JWT (Bearer token) |
-| **Service-to-service** | `x-internal-key` header (`INTERNAL_SERVICE_KEY`) |
-| **Socket auth** | JWT in `handshake.auth.token` |
-| **Payments** | Razorpay / Stripe signature verification |
-| **Role access** | JWT payload `role` + frontend route guards |
-
----
-
-## 🌍 Deployment (Optional)
-
-| Component | Suggested Platform |
-|-----------|-------------------|
-| Frontend | **Vercel** (`frontend/vercel.json`) |
-| Microservices | **Render** / Railway (one service per instance) |
-| Database | **MongoDB Atlas** |
-| Message broker | **CloudAMQP** or **AWS EC2 + Docker** |
-| Images | **Cloudinary** |
-
-**Production checklist:**
-- Replace all `http://localhost:xxxx` URLs in every `.env` with deployed service URLs
-- Update `frontend/src/main.tsx` service URLs (or move to env vars)
-- Google OAuth → add production domain to **Authorized JavaScript origins**
-- MongoDB Atlas → IP whitelist ya `0.0.0.0/0`
-- Razorpay/Stripe → **live keys** (not test) for real payments
-- `JWT_SEC` + `INTERNAL_SERVICE_KEY` → strong production values, same across services
-
-See also: [RabbitMQ & AWS Setup Guide (PDF)](https://drive.google.com/file/d/1zCPzq7nQPKkq2m4vseQg7CoRVw19m1Cx/view)
-
----
-
-## 📚 Documentation
-
-| File | Description |
-|------|-------------|
-| [**RabbitMQ & AWS Setup (PDF)**](https://drive.google.com/file/d/1zCPzq7nQPKkq2m4vseQg7CoRVw19m1Cx/view) | Tutorial guide — RabbitMQ local/cloud/AWS setup |
-| [**ARCHITECTURE.md**](./ARCHITECTURE.md) | Mermaid diagrams — auth, payment, order, socket flows |
-| [**VIVA_DOCUMENTATION.md**](./VIVA_DOCUMENTATION.md) | Complete viva guide — APIs, Q&A, demo script, schemas |
-
----
-
-## 🎯 Viva Demo Checklist (10 min)
-
-1. **Landing page** — show marketing UI at `/`
-2. **Google login** → role selection
-3. **Customer** — browse restaurant → add to cart → checkout → pay (test mode)
-4. **Seller** — show live order notification + status update
-5. **Rider** — accept order → update delivery status
-6. **Customer** — live map tracking on order page
-7. **Admin** — verify a pending restaurant/rider
-8. **Architecture** — explain 6 services + RabbitMQ + Socket.IO
-
----
-
-## 🚧 Limitations & Future Work
-
-**Current limitations:**
-- No native mobile app
-- No SMS / push notifications
-- No ratings & reviews in app
-- Single-restaurant cart only
-- `rider_queue` declared but unused
-
-**Future enhancements:**
-- Coupon / discount engine
-- Cash on delivery
-- Automated CI/CD
-- Docker Compose for local dev
-- Rating system & order history analytics
-
----
-
-
 
 <div align="center">
 
-**Built with ❤️ for Final Year Project / Viva**
+**Built with ❤️ following production-style patterns**
 
-🍔 **ByteBites** — *Crave it. Order it. Love it.*
+ByteBites · Crave it. Order it. Love it.
 
 </div>

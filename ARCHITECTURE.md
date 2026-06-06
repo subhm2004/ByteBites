@@ -1,20 +1,44 @@
 # ByteBites — System Architecture
 
-> Diagrams match the **actual codebase**. View in Cursor/GitHub (Mermaid preview) or paste into [mermaid.live](https://mermaid.live).
+> Diagrams match the **actual codebase** as of the latest build. View in Cursor/GitHub (Mermaid preview) or paste into [mermaid.live](https://mermaid.live).
+
+**Related docs:** [README.md](./README.md) (features + setup) · [VIVA_DOCUMENTATION.md](./VIVA_DOCUMENTATION.md) (viva prep)
 
 ---
 
-## 1. High-level system (all services + externals)
+## Table of Contents
+
+1. [High-level system](#1-high-level-system)
+2. [MongoDB — collections & ownership](#2-mongodb--collections--ownership)
+3. [Auth service](#3-auth-service)
+4. [Payment flow](#4-payment-flow)
+5. [Order lifecycle](#5-order-lifecycle)
+6. [Smart rider dispatch](#6-smart-rider-dispatch)
+7. [Rider delivery & earnings](#7-rider-delivery--earnings)
+8. [Coupon & discount engine (LLD)](#8-coupon--discount-engine-lld)
+9. [Dynamic ETA system](#9-dynamic-eta-system)
+10. [Reviews & ratings](#10-reviews--ratings)
+11. [Realtime — Socket.IO](#11-realtime--socketio)
+12. [Utils service](#12-utils-service)
+13. [Admin service](#13-admin-service)
+14. [Restaurant API map](#14-restaurant-api-map)
+15. [RabbitMQ queues](#15-rabbitmq-queues)
+16. [Shared secrets & ports](#16-shared-secrets--ports)
+17. [Startup order](#17-startup-order)
+
+---
+
+## 1. High-level system
 
 ```mermaid
 flowchart TB
     subgraph Client["Browser"]
-        FE["Frontend :5173<br/>React + Vite + Socket.IO client"]
+        FE["Frontend :5173<br/>React 19 + Vite + Socket.IO<br/>Leaflet + Recharts + jsPDF"]
     end
 
     subgraph Backend["Node.js microservices"]
-        AUTH["Auth :5000<br/>/api/auth"]
-        REST["Restaurant :5001<br/>/api/restaurant, /item, /cart, /address, /order"]
+        AUTH["Auth :5007<br/>/api/auth"]
+        REST["Restaurant :5001<br/>/restaurant, /item, /cart<br/>/address, /order, /coupon, /review"]
         UTILS["Utils :5002<br/>/api/upload, /api/payment"]
         RT["Realtime :5004<br/>WebSocket + /api/v1/internal/emit"]
         RIDER["Rider :5005<br/>/api/rider"]
@@ -23,27 +47,25 @@ flowchart TB
 
     subgraph Storage["Data & messaging"]
         MONGO[("MongoDB Atlas<br/>DB: Zomato_Clone")]
-        RMQ{{"RabbitMQ (CloudAMQP)<br/>payment_event<br/>order_ready_queue<br/>rider_queue*"}}
+        RMQ{{"RabbitMQ<br/>payment_event<br/>order_ready_queue<br/>rider_queue*"}}
     end
 
     subgraph External["Third-party"]
-        GOOGLE["Google OAuth API"]
+        GOOGLE["Google OAuth"]
         CLOUD["Cloudinary"]
         STRIPE["Stripe"]
         RAZOR["Razorpay"]
+        OSRM["OSRM Routing"]
+        NOM["Nominatim Geocoding"]
     end
 
-    FE -->|"HTTP + Bearer JWT"| AUTH
-    FE -->|"HTTP + Bearer JWT"| REST
+    FE -->|"HTTP + Bearer JWT"| AUTH & REST & RIDER & ADMIN
     FE -->|"HTTP"| UTILS
     FE -->|"WebSocket auth.token=JWT"| RT
-    FE -->|"HTTP + Bearer JWT"| RIDER
-    FE -->|"HTTP + Bearer JWT"| ADMIN
+    FE --> OSRM & NOM
 
-    AUTH -->|"mongoose"| MONGO
-    REST -->|"mongoose"| MONGO
-    RIDER -->|"mongoose"| MONGO
-    ADMIN -->|"mongodb driver direct"| MONGO
+    AUTH & REST & RIDER -->|"mongoose"| MONGO
+    ADMIN -->|"mongodb driver"| MONGO
 
     UTILS -->|"publish PAYMENT_SUCCESS"| RMQ
     REST -->|"consume payment_event"| RMQ
@@ -51,120 +73,138 @@ flowchart TB
     RIDER -->|"consume order_ready_queue"| RMQ
 
     AUTH --> GOOGLE
-    UTILS --> CLOUD
-    UTILS --> STRIPE
-    UTILS --> RAZOR
+    UTILS --> CLOUD & STRIPE & RAZOR
 
-    REST -->|"axios POST /internal/emit<br/>x-internal-key"| RT
-    RIDER -->|"axios POST /internal/emit<br/>x-internal-key"| RT
-    REST -->|"axios POST /api/upload"| UTILS
-    RIDER -->|"axios POST /api/upload"| UTILS
-    UTILS -->|"axios GET /api/order/payment/:id<br/>x-internal-key"| REST
-    RIDER -->|"axios PUT/GET /api/order/*<br/>x-internal-key"| REST
+    REST -->|"internal emit"| RT
+    RIDER -->|"internal emit"| RT
+    REST -->|"upload, order APIs"| UTILS & RIDER
+    RIDER -->|"assign/status/earnings"| REST
 ```
 
-> `rider_queue` is asserted in RabbitMQ config but has **no producer/consumer** in code yet.
+> `rider_queue` is asserted in RabbitMQ config but has **no producer/consumer** yet.
 
 ---
 
-## 2. MongoDB — who uses what
+## 2. MongoDB — collections & ownership
 
 ```mermaid
 flowchart LR
     MONGO[("Zomato_Clone")]
 
     AUTH -->|"users"| MONGO
-    REST -->|"restaurants, menuitems,<br/>carts, addresses, orders"| MONGO
+    REST -->|"restaurants, menuitems, carts,<br/>addresses, orders, reviews,<br/>riderreviews, coupons"| MONGO
     RIDER -->|"riders"| MONGO
-    ADMIN -->|"restaurants + riders<br/>(isVerified updates)"| MONGO
+    ADMIN -->|"users, restaurants, riders,<br/>coupons (direct writes)"| MONGO
 ```
 
-| Collection | Service | Operations |
-|------------|---------|------------|
-| `users` | Auth | create on Google login, role update |
-| `restaurants` | Restaurant, Admin | CRUD + Admin sets `isVerified` |
-| `menuitems` | Restaurant | seller menu |
-| `carts` | Restaurant | add / inc / dec / clear |
-| `addresses` | Restaurant | delivery addresses |
-| `orders` | Restaurant, Rider (via HTTP) | create, pay, status, assign rider |
-| `riders` | Rider, Admin | profile + Admin sets `isVerified` |
+| Collection | Primary Service | Key Fields / Indexes |
+|------------|-----------------|----------------------|
+| `users` | Auth, Admin | email, role, **isBanned** |
+| `restaurants` | Restaurant, Admin | autoLocation (**2dsphere**), isOpen, isVerified, **avgRating**, reviewCount |
+| `menuitems` | Restaurant | restaurantId, name, price, image, isAvailable |
+| `carts` | Restaurant | userId + restaurantId + itemId (compound unique) |
+| `addresses` | Restaurant | location (**2dsphere**), formattedAddress |
+| `orders` | Restaurant (+ Rider via HTTP) | status, payment, coupon, rider, distance, riderAmount, **expiresAt TTL** |
+| `riders` | Rider, Admin | location (**2dsphere**), isVerified, isAvailble, **avgRating**, reviewCount |
+| `reviews` | Restaurant | restaurantId, orderId (**unique**), rating 1–5 |
+| `riderreviews` | Restaurant | riderId, orderId (**unique**), rating 1–5 |
+| `coupons` | Restaurant (read), Admin (CRUD) | code, type, value, limits, expiresAt, isActive, usedCount |
 
 ---
 
-## 3. Auth service — login & JWT
+## 3. Auth service
 
 ```mermaid
 sequenceDiagram
     actor U as User
     participant FE as Frontend :5173
     participant G as Google OAuth
-    participant A as Auth :5000
+    participant A as Auth :5007
     participant DB as MongoDB
     participant RT as Realtime :5004
 
     U->>FE: Click "Continue with Google"
-    FE->>G: OAuth (auth-code flow)
+    FE->>G: OAuth auth-code flow
     G-->>FE: authorization code
     FE->>A: POST /api/auth/login { code }
-    A->>G: oauth2client.getToken(code)
-    A->>G: GET userinfo (email, name, picture)
-    A->>DB: User.findOne(email) or User.create()
-    A-->>FE: JWT (15d) + user JSON
+    A->>G: getToken + userinfo
+    A->>DB: User.findOne or User.create
+    alt isBanned = true
+        A-->>FE: 403 Account suspended
+    else OK
+        A-->>FE: JWT (15d) + user JSON
+    end
     FE->>FE: localStorage.setItem("token")
 
     U->>FE: Choose role customer / seller / rider
-    FE->>A: PUT /api/auth/add/role { role } + JWT
+    FE->>A: PUT /api/auth/add/role { role }
+    Note over A: admin NOT allowed via API
     A->>DB: update user.role
     A-->>FE: new JWT + user
 
     FE->>RT: Socket connect auth: { token: JWT }
-    Note over FE,RT: Realtime verifies JWT with same JWT_SEC
+    RT->>RT: verify JWT with JWT_SEC
+    RT->>RT: join user:{userId}
+    RT->>RT: if seller join restaurant:{restaurantId}
 ```
 
-**Routes (`services/auth`):**
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/auth/login` | — | Google OAuth login |
+| PUT | `/api/auth/add/role` | JWT | Assign customer / seller / rider |
+| GET | `/api/auth/me` | JWT | Profile + ban check |
 
-| Method | Path | Auth |
-|--------|------|------|
-| POST | `/api/auth/login` | No |
-| PUT | `/api/auth/add/role` | JWT |
-| GET | `/api/auth/me` | JWT |
+> **Note:** Auth port is **5007** locally (macOS AirPlay blocks 5000). `frontend/src/main.tsx` points to `:5007`.
 
 ---
 
-## 4. Payment flow (Razorpay or Stripe)
+## 4. Payment flow
 
 ```mermaid
 sequenceDiagram
     actor U as Customer
     participant FE as Frontend
     participant R as Restaurant :5001
+    participant CE as CouponEngine
     participant U2 as Utils :5002
     participant PG as Razorpay / Stripe
     participant Q as RabbitMQ payment_event
     participant RT as Realtime :5004
     participant DB as MongoDB
 
-    U->>FE: Checkout
-    FE->>R: POST /api/order/new (JWT)<br/>paymentStatus=pending, status=placed
-    R->>DB: Order.create, Cart.deleteMany
+    U->>FE: Checkout — select address, apply coupon
+    FE->>R: POST /api/coupon/validate { code, subtotal }
+    R->>CE: apply(code, context)
+    CE-->>FE: discount preview + updated total
+
+    FE->>R: POST /api/order/new { couponCode, addressId, paymentMethod }
+    R->>CE: apply() again at create time
+    R->>DB: Order.create (pending, expiresAt +15min)
+    R->>DB: Cart.deleteMany
     R-->>FE: orderId, amount
 
     FE->>U2: POST /api/payment/create OR /stripe/create
-    U2->>R: GET /api/order/payment/:id<br/>Header: x-internal-key
-    R-->>U2: amount, currency
-    U2->>PG: create payment session / order
-    U2-->>FE: payment UI keys / session
-
+    U2->>R: GET /api/order/payment/:id (x-internal-key)
+    U2->>PG: create payment session
     U->>PG: Pay
-    FE->>U2: POST verify (razorpay or stripe)
-    U2->>U2: verify signature
-    U2->>Q: publish PAYMENT_SUCCESS { orderId, paymentId, provider }
+    FE->>U2: POST verify
+    U2->>Q: publish PAYMENT_SUCCESS { orderId, paymentId }
 
     Q->>R: payment.consumer
-    R->>DB: paymentStatus=paid, status=placed, unset expiresAt
-    R->>RT: POST /api/v1/internal/emit<br/>event: order:new<br/>room: restaurant:{restaurantId}
-    RT-->>FE: Socket order:new (seller dashboard)
+    R->>DB: paymentStatus=paid, unset expiresAt
+    R->>CE: recordUsage(couponId) if coupon applied
+    R->>RT: emit order:new → restaurant:{restaurantId}
+    RT-->>FE: Seller hears quack.mp3 + new order card
 ```
+
+**Fee model (order creation):**
+
+| Fee | Rule |
+|-----|------|
+| Delivery | ₹49 if subtotal < ₹250, else ₹0 |
+| Platform | ₹7 |
+| Discount | CouponEngine result |
+| Rider payout | `ceil(distance_km) × ₹17` |
 
 ---
 
@@ -172,118 +212,331 @@ sequenceDiagram
 
 ```mermaid
 stateDiagram-v2
-    [*] --> placed: createOrder paymentStatus=pending
-    placed --> placed: payment consumer sets paid
-    placed --> preparing: seller PUT /api/order/:orderId
-    preparing --> ready_for_rider: seller updates status
-    ready_for_rider --> rider_assigned: rider POST accept
-    rider_assigned --> picked_up: rider PUT update status
-    picked_up --> delivered: rider PUT update status
+    [*] --> placed: createOrder (payment pending)
+    placed --> placed: payment consumer → paid
+    placed --> accepted: seller accepts
+    placed --> cancelled: seller cancels
+    accepted --> preparing: seller starts cooking
+    accepted --> cancelled: seller cancels
+    preparing --> ready_for_rider: food ready
+    preparing --> cancelled: seller cancels
+    ready_for_rider --> rider_assigned: rider accepts
+    rider_assigned --> picked_up: rider picks up
+    picked_up --> delivered: rider delivers
+    delivered --> [*]: customer can review
+    cancelled --> [*]
+
+    note right of placed
+        TTL index: unpaid orders
+        auto-delete after 15 min
+    end note
 ```
 
-### 5a. Seller `ready_for_rider` → RabbitMQ → nearby riders
+### Seller status update
 
 ```mermaid
 sequenceDiagram
-    participant FE as Frontend Seller
+    participant FE as Seller Dashboard
     participant R as Restaurant :5001
-    participant Q as RabbitMQ order_ready_queue
-    participant RID as Rider :5005
-    participant DB as MongoDB
     participant RT as Realtime :5004
-    participant FE2 as Frontend Rider
+    participant Q as RabbitMQ
 
-    FE->>R: PUT /api/order/:orderId { status: ready_for_rider }
-    R->>DB: order.status update
-    R->>RT: emit order:update → room user:{customerId}
-    R->>Q: ORDER_READY_FOR_RIDER { orderId, restaurantId, location }
+    FE->>R: PUT /api/order/:orderId { status }
+    R->>R: validate SELLER_STATUS_TRANSITIONS
+    R->>RT: emit order:update → user:{customerId}
 
-    Q->>RID: orderReady.consumer
-    RID->>DB: Rider.find near location ($near 500m)
-    loop each available verified rider
-        RID->>RT: emit order:available → room user:{rider.userId}
-        RT-->>FE2: Socket order:available
+    alt status = ready_for_rider
+        R->>Q: ORDER_READY_FOR_RIDER { orderId, restaurantId, location }
     end
 ```
 
-### 5b. Rider accepts order
+**Allowed seller transitions:**
+
+| From | To |
+|------|-----|
+| `placed` | `accepted`, `cancelled` |
+| `accepted` | `preparing`, `cancelled` |
+| `preparing` | `ready_for_rider`, `cancelled` |
+
+---
+
+## 6. Smart rider dispatch
+
+Previously all nearby riders received `order:available` simultaneously. **Current implementation:** sequential nearest-first dispatch with 10-second accept window per rider.
 
 ```mermaid
 sequenceDiagram
-    participant FE as Frontend Rider
-    participant RID as Rider :5005
-    participant R as Restaurant :5001
-    participant RT as Realtime :5004
+    participant Q as RabbitMQ order_ready_queue
+    participant RD as Rider :5005 consumer
     participant DB as MongoDB
+    participant RT as Realtime :5004
+    participant R as Restaurant :5001
+    participant FE as Rider App
 
-    FE->>RID: POST /api/rider/accept/:orderId (JWT)
-    RID->>R: PUT /api/order/assign/rider<br/>x-internal-key
-    R->>DB: assign rider on order
-    R->>RT: emit order:rider_assigned
-    RID->>DB: Rider isAvailble = false
+    Q->>RD: ORDER_READY_FOR_RIDER
+    RD->>DB: $geoNear — riders within 500m<br/>isAvailble=true, isVerified=true<br/>sorted by distance ASC
+
+    loop Sequential dispatch (index = 0, 1, 2…)
+        RD->>RT: emit order:available → user:{nearestRider.userId}
+        RT-->>FE: Alert + faaah.mp3 sound
+        RD->>RD: wait 10 seconds
+        RD->>R: GET /api/order/rider/dispatch/:orderId
+        alt order still unassigned
+            RD->>RD: offer to next nearest rider
+        else rider accepted or cancelled
+            RD->>RD: stop dispatch chain
+        end
+    end
 ```
 
-### 5c. Rider updates delivery status
+| Parameter | Value |
+|-----------|-------|
+| Search radius | 500 meters |
+| Offer timeout | 10 seconds per rider |
+| Sort order | Nearest first (`$geoNear` + `$sort distance ASC`) |
+| Requirements | `isVerified: true`, `isAvailble: true` |
+
+---
+
+## 7. Rider delivery & earnings
+
+### Accept & deliver
 
 ```mermaid
 sequenceDiagram
-    participant FE as Frontend Rider
-    participant RID as Rider :5005
+    participant FE as Rider App
+    participant RD as Rider :5005
     participant R as Restaurant :5001
     participant RT as Realtime :5004
 
-    FE->>RID: PUT /api/rider/order/update/:orderId
-    RID->>R: PUT /api/order/update/status/rider<br/>x-internal-key
-    R->>R: update order.status
-    R->>RT: emit order:update → user:{customerId}
-    RT-->>FE: live tracking UI
+    FE->>RD: POST /api/rider/accept/:orderId
+    RD->>R: PUT /api/order/assign/rider (x-internal-key)
+    R->>RT: emit order:rider_assigned
+    RD->>RD: isAvailble = false
+
+    loop Every 10s during delivery
+        FE->>RT: POST /internal/emit rider:location
+        RT-->>FE: Customer OrderPage map updates
+    end
+
+    FE->>RD: PUT /api/rider/order/update/:orderId
+    Note over RD,R: rider_assigned → picked_up → delivered
+    RD->>R: PUT /api/order/update/status/rider
+    R->>RT: emit order:update / order:rider_assigned
+```
+
+### Earnings data flow
+
+```mermaid
+sequenceDiagram
+    participant FE as Rider Dashboard
+    participant RD as Rider :5005
+    participant R as Restaurant :5001
+    participant DB as MongoDB
+
+    FE->>RD: GET /api/rider/earnings (JWT)
+    RD->>R: GET /api/order/rider/earnings?riderId= (x-internal-key)
+    R->>DB: Order.find({ riderId, status: delivered })
+    R->>DB: Restaurant.find (pickup coords for map snapshots)
+    R-->>RD: { summary, daily[], trips[] }
+    RD-->>FE: Earnings chart + trip history with maps
 ```
 
 ---
 
-## 6. Realtime service — Socket rooms & internal emit
+## 8. Coupon & discount engine (LLD)
+
+**Location:** `services/restaurant/src/coupon/`
+
+```mermaid
+classDiagram
+    class CouponEngine {
+        <<Facade>>
+        +apply(code, context) DiscountResult
+        +recordUsage(couponId) void
+    }
+    class CouponRepository {
+        <<Repository>>
+        +findByCode(code)
+        +incrementUsage(couponId)
+    }
+    class CouponValidator {
+        +validate(coupon, context)
+        -assertActive()
+        -assertNotExpired()
+        -assertMinOrder()
+        -assertUsageLimit()
+        -assertPerUserLimit()
+    }
+    class DiscountStrategyFactory {
+        <<Factory>>
+        +getStrategy(type) DiscountStrategy
+    }
+    class DiscountStrategy {
+        <<interface>>
+        +calculate(subtotal, coupon) number
+    }
+    class FlatDiscountStrategy {
+        +calculate() min(value, subtotal)
+    }
+    class PercentWithCapStrategy {
+        +calculate() percent capped by maxDiscount
+    }
+
+    CouponEngine --> CouponRepository
+    CouponEngine --> CouponValidator
+    CouponEngine --> DiscountStrategyFactory
+    DiscountStrategyFactory --> DiscountStrategy
+    DiscountStrategy <|.. FlatDiscountStrategy
+    DiscountStrategy <|.. PercentWithCapStrategy
+```
+
+### Coupon types
+
+| Type | Algorithm | Example |
+|------|-----------|---------|
+| `flat` | `min(coupon.value, subtotal)` | `FLAT50` → ₹50 off |
+| `percent_cap` | `(subtotal × value / 100)` capped by `maxDiscount` | `SAVE20` → 20% off, max ₹100 |
+
+### Validation chain
+
+1. `isActive === true`
+2. `expiresAt > now`
+3. `subtotal >= minOrderAmount`
+4. `usedCount < usageLimit` (if limit set)
+5. Per-user paid order count with same `couponId < perUserLimit`
+
+### Admin → Engine integration
+
+```mermaid
+flowchart LR
+    ADMIN["Admin :5006<br/>Coupon CRUD"] -->|"mongodb driver<br/>direct write"| DB[("coupons collection")]
+    REST["Restaurant :5001<br/>CouponEngine"] -->|"mongoose read"| DB
+    CHECKOUT["Customer Checkout"] --> REST
+```
+
+Admin creates/edits coupons directly in MongoDB. Restaurant service reads the same collection at apply time — no HTTP between Admin and Restaurant for coupons.
+
+---
+
+## 9. Dynamic ETA system
+
+**Location:** `frontend/src/utils/eta.ts`
+
+```mermaid
+flowchart TD
+    DIST["Haversine distance<br/>(user ↔ restaurant)"] --> FORMULA
+    FORMULA["ETA = 15min prep<br/>+ (dist ÷ 22 km/h × 60)<br/>+ 5min buffer"]
+    FORMULA --> RANGE["Range [total−5, total+5]<br/>clamped to 20–60 min"]
+
+    RANGE --> EXPLORE["Explore cards"]
+    RANGE --> RESTPAGE["Restaurant profile badge"]
+    RANGE --> CHECKOUT["Checkout ETA banner"]
+
+    ORDER["Order status"] --> LIVE["getOrderETA()"]
+    LIVE --> TRACK["Order tracking page"]
+    RIDERGPS["Rider GPS (picked_up)"] --> LIVE
+```
+
+| Constant | Value |
+|----------|-------|
+| `AVG_RIDER_SPEED_KMH` | 22 |
+| `BASE_PREP_MINUTES` | 15 |
+| `ETA_BUFFER_MINUTES` | 5 |
+| Min / Max display | 20 / 60 min |
+
+| Order Status | ETA behaviour |
+|--------------|---------------|
+| `placed` / `accepted` | Full estimated range |
+| `preparing` | ~70% of midpoint |
+| `ready_for_rider` | Travel + 8 min |
+| `rider_assigned` | Travel + 6 min |
+| `picked_up` | Live rider → customer distance |
+| `delivered` / `cancelled` | Final label |
+
+---
+
+## 10. Reviews & ratings
+
+```mermaid
+sequenceDiagram
+    actor C as Customer
+    participant FE as Frontend
+    participant R as Restaurant :5001
+    participant DB as MongoDB
+    participant RD as Rider :5005
+
+    Note over C,FE: Order status = delivered
+
+    C->>FE: ReviewModal opens (auto or manual)
+    FE->>R: POST /api/review { orderId, rating, riderRating, comment }
+    R->>R: validate owner + delivered + not duplicate
+
+    R->>DB: Review.create (restaurant)
+    R->>DB: aggregate → update Restaurant avgRating
+
+    opt order had rider
+        R->>DB: RiderReview.create
+        R->>RD: PATCH /api/rider/internal/rating (x-internal-key)
+        RD->>DB: update Rider avgRating
+    end
+
+    FE->>R: GET /api/review/restaurant/:id
+    R-->>FE: reviews list + avg for RestaurantPage
+```
+
+| Collection | Unique constraint | Aggregated on |
+|------------|--------------------|--------------| 
+| `reviews` | one per `orderId` | `restaurants.avgRating` |
+| `riderreviews` | one per `orderId` | `riders.avgRating` |
+
+---
+
+## 11. Realtime — Socket.IO
 
 ```mermaid
 flowchart TB
     subgraph Connect["On WebSocket connect"]
-        JWT["Verify JWT from handshake.auth.token"]
-        JOIN1["join user:{user._id}"]
-        JOIN2["if seller: join restaurant:{restaurantId}"]
-        JWT --> JOIN1 --> JOIN2
+        JWT["Verify handshake.auth.token"]
+        U["join user:{user._id}"]
+        S["if seller JWT has restaurantId:<br/>join restaurant:{restaurantId}"]
+        JWT --> U --> S
     end
 
     subgraph Internal["POST /api/v1/internal/emit"]
-        KEY["Check x-internal-key"]
+        KEY["x-internal-key check"]
         EMIT["io.to(room).emit(event, payload)"]
         KEY --> EMIT
     end
 
     REST_C["Restaurant controllers"] --> Internal
-    RID_C["Rider orderReady.consumer"] --> Internal
-    Internal --> FE["Frontend socket listeners"]
+    RID_C["Rider dispatch consumer"] --> Internal
+    FE_RIDER["Rider map (GPS)"] --> Internal
+    Internal --> CLIENT["Frontend listeners"]
 ```
 
-| Socket event | Emitted from | Room | Frontend file |
-|--------------|--------------|------|---------------|
-| `order:new` | Restaurant after payment | `restaurant:{restaurantId}` | `RestaurantOrders.tsx` |
+| Socket event | Emitted from | Room | Frontend |
+|--------------|--------------|------|----------|
+| `order:new` | Restaurant payment consumer | `restaurant:{restaurantId}` | `RestaurantOrders.tsx` |
 | `order:update` | Restaurant status change | `user:{customerId}` | `Orders.tsx`, `OrderPage.tsx` |
-| `order:rider_assigned` | Restaurant assign rider | customer + restaurant | `Orders.tsx`, `RestaurantOrders.tsx` |
-| `order:available` | Rider consumer | `user:{rider.userId}` | `RiderDashboard.tsx` |
-| `rider:location` | tracking | `OrderPage.tsx` | map updates |
+| `order:rider_assigned` | Assign rider / status update | `user:{customerId}`, `restaurant:{id}` | Orders, OrderPage, Seller |
+| `order:available` | Rider dispatch consumer | `user:{riderUserId}` | `RiderDashboard.tsx` |
+| `rider:location` | Rider frontend → internal emit | `user:{customerUserId}` | `OrderPage.tsx` map |
+
+**Connection:** `io("http://localhost:5004", { auth: { token: JWT } })`
 
 ---
 
-## 7. Utils service
+## 12. Utils service
 
 ```mermaid
 flowchart LR
     subgraph Upload["Image upload"]
-        REST_U["Restaurant<br/>restaraunt.ts, menuitem.ts"]
-        RID_U["Rider addRiderProfile"]
+        REST_U["Restaurant<br/>restaurant, menuitem"]
+        RID_U["Rider profile"]
         API["POST /api/upload"]
         CL["Cloudinary"]
-        REST_U --> API --> CL
-        RID_U --> API --> CL
+        REST_U & RID_U --> API --> CL
     end
 
     subgraph Pay["Payment APIs"]
@@ -301,36 +554,56 @@ Utils **requires** Cloudinary env vars at startup or it throws.
 
 ---
 
-## 8. Admin service
+## 13. Admin service
+
+Admin uses the **native MongoDB driver** — no Mongoose, no inter-service HTTP.
 
 ```mermaid
-flowchart LR
-    FE["Frontend Admin"] -->|"JWT role=admin"| ADM["Admin :5006"]
+flowchart TB
+    FE["Frontend Admin.tsx<br/>role = admin"] -->|"JWT"| ADM["Admin :5006"]
     ADM --> DB[("MongoDB Zomato_Clone")]
+
+    subgraph Tabs["Admin tabs"]
+        U["Users — ban/unban"]
+        REST_T["Restaurants — verify pending"]
+        RID_T["Riders — verify pending"]
+        COUP["Coupons — full CRUD"]
+    end
+
+    ADM --> Tabs
 ```
 
-| Method | Path |
-|--------|------|
-| GET | `/api/v1/admin/restaurant/pending` |
-| GET | `/api/v1/admin/rider/pending` |
-| PATCH | `/api/v1/verify/restaurant/:id` |
-| PATCH | `/api/v1/verify/rider/:id` |
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/admin/users` | List users (max 100) |
+| PATCH | `/api/v1/admin/users/:id/status` | Ban / unban (self-ban blocked) |
+| GET | `/api/v1/admin/restaurant/pending` | Unverified restaurants |
+| PATCH | `/api/v1/verify/restaurant/:id` | Set `isVerified: true` |
+| GET | `/api/v1/admin/rider/pending` | Unverified riders |
+| PATCH | `/api/v1/verify/rider/:id` | Set `isVerified: true` |
+| GET | `/api/v1/admin/coupons` | List all coupons |
+| POST | `/api/v1/admin/coupon` | Create coupon |
+| PATCH | `/api/v1/admin/coupon/:id` | Update coupon fields |
+| PATCH | `/api/v1/admin/coupon/:id/toggle` | Toggle `isActive` |
+| DELETE | `/api/v1/admin/coupon/:id` | Delete coupon |
 
-Admin does **not** call other microservices — only direct MongoDB updates.
+**Admin role setup:** Set `role: "admin"` manually in MongoDB — not available via `PUT /api/auth/add/role`.
 
 ---
 
-## 9. Restaurant API map
+## 14. Restaurant API map
 
-| Prefix | Purpose |
-|--------|---------|
-| `/api/restaurant` | Seller restaurant CRUD, nearby list |
-| `/api/item` | Menu CRUD |
-| `/api/cart` | Cart operations |
-| `/api/address` | Delivery addresses |
-| `/api/order` | Orders + seller status |
+| Prefix | Routes | Auth |
+|--------|--------|------|
+| `/api/restaurant` | POST `/new`, GET `/my`, GET `/all`, PUT `/status`, PUT `/edit`, GET `/:id` | JWT / seller |
+| `/api/item` | POST `/new`, GET `/all/:id`, PUT `/:itemId`, DELETE `/:itemId`, PUT `/status/:itemId` | JWT / seller |
+| `/api/cart` | POST `/add`, GET `/all`, PUT `/inc`, PUT `/dec`, DELETE `/clear` | JWT |
+| `/api/address` | POST `/new`, GET `/all`, DELETE `/:id` | JWT |
+| `/api/order` | POST `/new`, GET `/myorder`, GET `/:id`, PUT `/:orderId`, GET `/analytics/:restaurantId` | JWT / seller |
+| `/api/coupon` | POST `/validate` | JWT |
+| `/api/review` | POST `/`, GET `/my`, GET `/restaurant/:id`, GET `/rider/:id` | JWT |
 
-**Internal routes** (`x-internal-key` header):
+**Internal routes** (`x-internal-key`, no JWT):
 
 | Method | Path | Called by |
 |--------|------|-----------|
@@ -338,48 +611,83 @@ Admin does **not** call other microservices — only direct MongoDB updates.
 | PUT | `/api/order/assign/rider` | Rider |
 | GET | `/api/order/current/rider` | Rider |
 | PUT | `/api/order/update/status/rider` | Rider |
+| GET | `/api/order/rider/earnings` | Rider |
+| GET | `/api/order/rider/dispatch/:orderId` | Rider dispatch consumer |
 
 ---
 
-## 10. RabbitMQ queues
+## 15. RabbitMQ queues
 
-| Queue | Publisher | Consumer | Payload type |
-|-------|-----------|----------|--------------|
-| `payment_event` | Utils `publishPaymentSuccess` | Restaurant `payment.consumer` | `PAYMENT_SUCCESS` |
-| `order_ready_queue` | Restaurant `publishEvent` | Rider `orderReady.consumer` | `ORDER_READY_FOR_RIDER` |
-| `rider_queue` | — | — | asserted only, unused |
+| Queue | Env var | Publisher | Consumer | Event | Effect |
+|-------|---------|-----------|----------|-------|--------|
+| `payment_event` | `PAYMENT_QUEUE` | Utils | Restaurant | `PAYMENT_SUCCESS` | Mark paid, coupon usage++, notify seller |
+| `order_ready_queue` | `ORDER_READY_QUEUE` | Restaurant | Rider | `ORDER_READY_FOR_RIDER` | Sequential nearest-rider dispatch |
+| `rider_queue` | `RIDER_QUEUE` | — | — | — | Asserted only, unused |
 
 ---
 
-## 11. Shared secrets (must match)
+## 16. Shared secrets & ports
+
+### Ports
+
+| Service | Port | Notes |
+|---------|------|-------|
+| Frontend | 5173 | Vite dev server |
+| Auth | **5007** | Not 5000 (macOS AirPlay conflict) |
+| Restaurant | 5001 | RabbitMQ consumer at boot |
+| Utils | 5002 | Cloudinary required |
+| Realtime | 5004 | Socket.IO |
+| Rider | 5005 | RabbitMQ consumer at boot |
+| Admin | 5006 | Native MongoDB driver |
+| RabbitMQ | 5672 | Docker or CloudAMQP |
+
+### Secrets (must be identical)
 
 | Variable | Used by |
 |----------|---------|
-| `JWT_SEC` | Auth, Restaurant, Rider, Admin, Realtime (socket) |
-| `INTERNAL_SERVICE_KEY` | Utils, Restaurant, Rider, Realtime + `VITE_INTERNAL_SERVICE_KEY` in frontend |
+| `JWT_SEC` | Auth, Restaurant, Rider, Realtime, Admin |
+| `INTERNAL_SERVICE_KEY` | Restaurant, Utils, Realtime, Rider + `VITE_INTERNAL_SERVICE_KEY` in frontend |
 
 ---
 
-## 12. Recommended startup order
+## 17. Startup order
 
 ```mermaid
 flowchart LR
-    A1["MongoDB + RabbitMQ up"] --> A2["Auth"]
-    A2 --> A3["Utils"]
-    A3 --> A4["Realtime"]
-    A4 --> A5["Restaurant"]
-    A5 --> A6["Rider"]
-    A6 --> A7["Admin"]
+    A0["RabbitMQ up"] --> A1["MongoDB Atlas reachable"]
+    A1 --> A2["Auth :5007"]
+    A2 --> A3["Utils :5002"]
+    A3 --> A4["Realtime :5004"]
+    A4 --> A5["Restaurant :5001"]
+    A5 --> A6["Rider :5005"]
+    A6 --> A7["Admin :5006"]
     A7 --> A8["Frontend :5173"]
+```
+
+Each backend service: `npm run dev` → `tsc --watch` + `node --watch dist/index.js`.
+
+---
+
+## Role-based UI routing
+
+```mermaid
+flowchart TD
+    LOGIN["User logs in"] --> ROLE{user.role?}
+    ROLE -->|seller| SELLER["Restaurant.tsx<br/>Seller dashboard"]
+    ROLE -->|rider| RIDER_UI["RiderDashboard.tsx"]
+    ROLE -->|admin| ADMIN_UI["Admin.tsx"]
+    ROLE -->|customer / null| CUSTOMER["BrowserRouter<br/>Landing + Explore + Cart + …"]
 ```
 
 ---
 
-## Excalidraw
+## Excalidraw / export tips
 
 1. Open [excalidraw.com](https://excalidraw.com)
-2. Use **Section 1** as the main canvas (boxes + arrows)
-3. Use **Sections 3–5** for sequence / timeline pages
-4. Export from [mermaid.live](https://mermaid.live) as PNG/SVG to import into Excalidraw
+2. Use **Section 1** as the main system canvas
+3. Use **Sections 4, 6, 8, 10** for sequence / flow pages
+4. Export Mermaid blocks from [mermaid.live](https://mermaid.live) as PNG/SVG
 
-*Source: `services/*`, `frontend/src` — ByteBites repo.*
+---
+
+*Source: `services/*`, `frontend/src` — ByteBites (TOMATO repo). Last updated to reflect coupon engine, dynamic ETA, smart dispatch, reviews, admin coupons, and earnings dashboard.*
