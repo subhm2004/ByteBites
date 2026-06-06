@@ -15,10 +15,26 @@ import { BiMapPin, BiSearch } from "react-icons/bi";
 const categories = [
   { emoji: "🍕", label: "Pizza", tint: "from-orange-500/20 to-red-500/10 dark:from-orange-500/25 dark:to-red-900/20" },
   { emoji: "🍔", label: "Burgers", tint: "from-amber-500/20 to-yellow-500/10 dark:from-amber-500/25 dark:to-yellow-900/20" },
-  { emoji: "🍣", label: "Sushi", tint: "from-pink-500/20 to-rose-500/10 dark:from-pink-500/25 dark:to-rose-900/20" },
-  { emoji: "🍛", label: "Indian", tint: "from-yellow-500/20 to-orange-500/10 dark:from-yellow-500/25 dark:to-orange-900/20" },
-  { emoji: "🥗", label: "Healthy", tint: "from-green-500/20 to-emerald-500/10 dark:from-green-500/25 dark:to-emerald-900/20" },
+  { emoji: "🍛", label: "Biryani", tint: "from-yellow-600/20 to-amber-600/10 dark:from-yellow-600/25 dark:to-amber-900/20" },
   { emoji: "🍜", label: "Noodles", tint: "from-violet-500/20 to-purple-500/10 dark:from-violet-500/25 dark:to-purple-900/20" },
+  { emoji: "🥟", label: "Momos", tint: "from-slate-500/20 to-gray-500/10 dark:from-slate-500/25 dark:to-gray-800/30" },
+  { emoji: "🍣", label: "Sushi", tint: "from-pink-500/20 to-rose-500/10 dark:from-pink-500/25 dark:to-rose-900/20" },
+  { emoji: "🍝", label: "Pasta", tint: "from-red-400/20 to-orange-400/10 dark:from-red-400/25 dark:to-orange-900/20" },
+  { emoji: "🌮", label: "Tacos", tint: "from-lime-500/20 to-green-500/10 dark:from-lime-500/25 dark:to-green-900/20" },
+  { emoji: "🍗", label: "Chicken", tint: "from-orange-600/20 to-red-600/10 dark:from-orange-600/25 dark:to-red-900/20" },
+  { emoji: "🥙", label: "Shawarma", tint: "from-teal-500/20 to-cyan-500/10 dark:from-teal-500/25 dark:to-cyan-900/20" },
+  { emoji: "🍢", label: "Kebabs", tint: "from-red-500/20 to-rose-600/10 dark:from-red-500/25 dark:to-rose-900/20" },
+  { emoji: "🥘", label: "Indian", tint: "from-yellow-500/20 to-orange-500/10 dark:from-yellow-500/25 dark:to-orange-900/20" },
+  { emoji: "🍱", label: "Chinese", tint: "from-red-400/20 to-yellow-400/10 dark:from-red-400/25 dark:to-yellow-900/20" },
+  { emoji: "🥗", label: "Healthy", tint: "from-green-500/20 to-emerald-500/10 dark:from-green-500/25 dark:to-emerald-900/20" },
+  { emoji: "🍩", label: "Desserts", tint: "from-fuchsia-500/20 to-pink-500/10 dark:from-fuchsia-500/25 dark:to-pink-900/20" },
+  { emoji: "☕", label: "Coffee", tint: "from-amber-700/20 to-yellow-800/10 dark:from-amber-700/25 dark:to-yellow-900/20" },
+  { emoji: "🧋", label: "Beverages", tint: "from-cyan-500/20 to-blue-500/10 dark:from-cyan-500/25 dark:to-blue-900/20" },
+  { emoji: "🌯", label: "Rolls", tint: "from-indigo-500/20 to-violet-500/10 dark:from-indigo-500/25 dark:to-violet-900/20" },
+  { emoji: "🥞", label: "Breakfast", tint: "from-amber-400/20 to-orange-300/10 dark:from-amber-400/25 dark:to-orange-900/20" },
+  { emoji: "🍲", label: "Thali", tint: "from-orange-500/20 to-red-400/10 dark:from-orange-500/25 dark:to-red-900/20" },
+  { emoji: "🍦", label: "Ice Cream", tint: "from-sky-400/20 to-blue-400/10 dark:from-sky-400/25 dark:to-blue-900/20" },
+  { emoji: "🥪", label: "Sandwich", tint: "from-yellow-400/20 to-amber-400/10 dark:from-yellow-400/25 dark:to-amber-900/20" },
 ];
 
 const Explore = () => {
@@ -97,6 +113,17 @@ const Explore = () => {
 
   const openCount = restaurants.filter((r) => r.isOpen).length;
 
+  const filteredRestaurants = activeCategory
+    ? restaurants.filter((r) => {
+        const q = activeCategory.toLowerCase();
+        const name = r.name.toLowerCase();
+        const desc = (r.description || "").toLowerCase();
+        return name.includes(q) || desc.includes(q);
+      })
+    : restaurants;
+
+  const displayRestaurants = search ? restaurants : filteredRestaurants;
+
   return (
     <AppPage>
       {/* Hero */}
@@ -139,7 +166,7 @@ const Explore = () => {
           <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
             What are you craving?
           </h2>
-          <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
+          <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2 scrollbar-hide">
             {categories.map((c) => {
               const active = activeCategory === c.label;
               return (
@@ -184,29 +211,44 @@ const Explore = () => {
         </div>
       )}
 
-      {restaurants.length > 0 ? (
+      {displayRestaurants.length > 0 ? (
         <section>
           <div className="mb-4 flex items-end justify-between">
             <div>
               <h2 className="text-lg font-black text-gray-900 dark:text-white">
-                {search ? "Matching restaurants" : "All restaurants"}
+                {search
+                  ? "Matching restaurants"
+                  : activeCategory
+                    ? `${activeCategory} spots`
+                    : "All restaurants"}
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Tap a card to view menu & order
+                {activeCategory && filteredRestaurants.length < restaurants.length
+                  ? `${filteredRestaurants.length} match · tap category again to show all`
+                  : "Tap a card to view menu & order"}
               </p>
             </div>
+            {activeCategory && (
+              <button
+                type="button"
+                onClick={() => setActiveCategory(null)}
+                className="text-xs font-semibold text-[#E23744] hover:underline dark:text-[#ff6b7a]"
+              >
+                Clear filter
+              </button>
+            )}
           </div>
 
           <div
             className={`grid gap-4 ${
-              restaurants.length === 1
+              displayRestaurants.length === 1
                 ? "mx-auto max-w-md grid-cols-1"
-                : restaurants.length === 2
+                : displayRestaurants.length === 2
                   ? "grid-cols-1 sm:grid-cols-2 lg:max-w-3xl"
                   : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
             }`}
           >
-            {restaurants.map((res, index) => {
+            {displayRestaurants.map((res, index) => {
               const [resLng, resLat] = res.autoLocation.coordinates;
 
               const distance = getDistanceKm(
@@ -224,12 +266,28 @@ const Explore = () => {
                   image={res.image ?? ""}
                   distance={`${distance}`}
                   isOpen={res.isOpen}
-                  featured={restaurants.length <= 2 && index === 0}
+                  featured={displayRestaurants.length <= 2 && index === 0}
                 />
               );
             })}
           </div>
         </section>
+      ) : restaurants.length > 0 && activeCategory ? (
+        <EmptyState
+          variant="search"
+          emoji={categories.find((c) => c.label === activeCategory)?.emoji || "🍽️"}
+          title={`No ${activeCategory} spots nearby`}
+          subtitle="Try another category or browse all restaurants"
+          action={
+            <button
+              type="button"
+              onClick={() => setActiveCategory(null)}
+              className="rounded-xl bg-[#E23744] px-6 py-2.5 text-sm font-semibold text-white hover:bg-[#c9303c]"
+            >
+              Show all restaurants
+            </button>
+          }
+        />
       ) : (
         <EmptyState
           variant="search"
