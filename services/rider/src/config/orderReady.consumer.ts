@@ -2,6 +2,97 @@ import axios from "axios";
 import { getChannel } from "./rabbitmq.js";
 import { Rider } from "../model/Rider.js";
 
+const DISPATCH_OFFER_MS = 10_000;
+const dispatchTimeouts = new Map<string, NodeJS.Timeout>();
+
+const restaurantBase = () =>
+  process.env.RESTAURANT_SERVICE || "http://localhost:5001";
+
+const internalHeaders = () => ({
+  "x-internal-key": process.env.INTERNAL_SERVICE_KEY,
+});
+
+const clearDispatch = (orderId: string) => {
+  const existing = dispatchTimeouts.get(orderId);
+  if (existing) {
+    clearTimeout(existing);
+    dispatchTimeouts.delete(orderId);
+  }
+};
+
+const getOrderDispatchState = async (orderId: string) => {
+  const { data } = await axios.get(
+    `${restaurantBase()}/api/order/rider/dispatch/${orderId}`,
+    { headers: internalHeaders() }
+  );
+  return data as { status: string; riderId: string | null; assigned: boolean };
+};
+
+const notifyRider = async (
+  orderId: string,
+  restaurantId: string,
+  riderUserId: string
+) => {
+  await axios.post(
+    `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
+    {
+      event: "order:available",
+      room: `user:${riderUserId}`,
+      payload: { orderId, restaurantId },
+    },
+    { headers: internalHeaders() }
+  );
+};
+
+const dispatchSequentially = async (
+  orderId: string,
+  restaurantId: string,
+  riders: { userId: string; distance?: number }[],
+  index = 0
+) => {
+  if (index >= riders.length) {
+    console.log(`No rider accepted order ${orderId}`);
+    dispatchTimeouts.delete(orderId);
+    return;
+  }
+
+  const rider = riders[index];
+  if (!rider) {
+    dispatchTimeouts.delete(orderId);
+    return;
+  }
+
+  console.log(
+    `Offering order ${orderId} to rider ${rider.userId} (${index + 1}/${riders.length}, ${Math.round(rider.distance || 0)}m away)`
+  );
+
+  try {
+    await notifyRider(orderId, restaurantId, rider.userId);
+  } catch {
+    console.log(`Failed to notify rider ${rider.userId}, trying next`);
+    dispatchSequentially(orderId, restaurantId, riders, index + 1);
+    return;
+  }
+
+  const timeout = setTimeout(async () => {
+    try {
+      const state = await getOrderDispatchState(orderId);
+
+      if (state.assigned || state.status !== "ready_for_rider") {
+        clearDispatch(orderId);
+        return;
+      }
+
+      dispatchSequentially(orderId, restaurantId, riders, index + 1);
+    } catch (error) {
+      console.log("Dispatch status check failed:", error);
+      dispatchSequentially(orderId, restaurantId, riders, index + 1);
+    }
+  }, DISPATCH_OFFER_MS);
+
+  dispatchTimeouts.set(orderId, timeout);
+};
+
 export const startOrderReadyConsumer = async () => {
   const channel = getChannel();
 
@@ -11,68 +102,43 @@ export const startOrderReadyConsumer = async () => {
     if (!msg) return;
 
     try {
-      console.log("Recieved Message", msg.content.toString());
-
       const event = JSON.parse(msg.content.toString());
 
-      console.log("event type", event.type);
-
       if (event.type !== "ORDER_READY_FOR_RIDER") {
-        console.log("skipping non-order-ready-for-rider event");
         channel.ack(msg);
         return;
       }
 
       const { orderId, restaurantId, location } = event.data;
 
-      console.log("Searching for rider near:", location);
+      clearDispatch(orderId);
 
-      const riders = await Rider.find({
-        isAvailble: true,
-        isVerified: true,
-        location: {
-          $near: {
-            $geometry: location,
-            $maxDistance: 500,
+      const riders = await Rider.aggregate([
+        {
+          $geoNear: {
+            near: location,
+            distanceField: "distance",
+            maxDistance: 500,
+            spherical: true,
+            query: { isAvailble: true, isVerified: true },
           },
         },
-      });
+        { $sort: { distance: 1 } },
+        { $project: { userId: 1, distance: 1 } },
+      ]);
 
-      console.log(`Found ${riders.length} nearby riders`);
+      console.log(`Found ${riders.length} nearby riders for order ${orderId}`);
 
       if (riders.length === 0) {
-        console.log("No riders available nearby");
         channel.ack(msg);
         return;
       }
 
-      for (const rider of riders) {
-        console.log(`Notifying rider userId: ${rider.userId}`);
-
-        try {
-          await axios.post(
-            `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
-            {
-              event: "order:available",
-              room: `user:${rider.userId}`,
-              payload: { orderId, restaurantId },
-            },
-            {
-              headers: {
-                "x-internal-key": process.env.INTERNAL_SERVICE_KEY,
-              },
-            }
-          );
-          console.log(`Notified rider ${rider.userId} successfully`);
-        } catch (error) {
-          console.log(`Failed to notify rider ${rider.userId}`);
-        }
-      }
-
+      await dispatchSequentially(orderId, restaurantId, riders);
       channel.ack(msg);
-      console.log("Message acknowledged");
     } catch (error) {
       console.log("OrderReady consumer error:", error);
+      channel.ack(msg);
     }
   });
 };

@@ -11,6 +11,7 @@ import audio from "../assets/faaah.mp3";
 import RiderOrderRequest from "../components/RiderOrderRequest";
 import RiderCurrentOrder from "../components/RiderCurrentOrder";
 import RiderOrderMap from "../components/RiderOrderMap";
+import RiderEarningsPanel from "../components/RiderEarningsPanel";
 import {
   AppButton,
   AppCard,
@@ -35,6 +36,10 @@ const RiderDashboard = () => {
   const [toggling, setToggling] = useState(false);
   const [incomingOrders, setIncomingOrders] = useState<string[]>([]);
   const [currentOrder, setCurrentOrder] = useState<IOrder | null>(null);
+  const [earningsRefreshKey, setEarningsRefreshKey] = useState(0);
+  const [dashboardTab, setDashboardTab] = useState<"active" | "earnings">(
+    "active"
+  );
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -289,6 +294,27 @@ const RiderDashboard = () => {
           🛵 Rider Dashboard
         </div>
 
+        <div className="flex gap-2 rounded-xl bg-gray-100 p-1 dark:bg-gray-800">
+          {(["active", "earnings"] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setDashboardTab(tab)}
+              className={`flex-1 rounded-lg py-2 text-sm font-semibold transition ${
+                dashboardTab === tab
+                  ? "bg-white text-[#E23744] shadow-sm dark:bg-gray-900 dark:text-[#ff6b7a]"
+                  : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              }`}
+            >
+              {tab === "active" ? "📦 Active" : "💰 Earnings"}
+            </button>
+          ))}
+        </div>
+
+        {dashboardTab === "earnings" ? (
+          <RiderEarningsPanel refreshKey={earningsRefreshKey} />
+        ) : (
+          <>
         <AppCard className="text-center">
           <img
             src={profile.picture}
@@ -326,9 +352,9 @@ const RiderDashboard = () => {
             </span>
           </div>
 
-          <p className="mt-4 rounded-xl bg-blue-50 px-3 py-2 text-xs leading-relaxed text-blue-800">
-            Stay within 500m of a restaurant hotspot before going online to
-            receive orders.
+          <p className="mt-4 rounded-xl bg-blue-50 px-3 py-2 text-xs leading-relaxed text-blue-800 dark:bg-blue-950/40 dark:text-blue-200">
+            Stay within 500m of a restaurant. Orders go to the nearest online
+            rider first — you get 10 seconds to accept before the next rider.
           </p>
 
           {profile.isVerified && !currentOrder && (
@@ -386,12 +412,17 @@ const RiderDashboard = () => {
           <div className="space-y-4">
             <RiderCurrentOrder
               order={currentOrder}
-              onStatusUpdate={fetchCurrentOrder}
+              onStatusUpdate={() => {
+                fetchCurrentOrder();
+                setEarningsRefreshKey((k) => k + 1);
+              }}
             />
             <AppCard className="!p-0 overflow-hidden">
               <RiderOrderMap order={currentOrder} />
             </AppCard>
           </div>
+        )}
+          </>
         )}
       </div>
     </RoleShell>

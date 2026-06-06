@@ -2,7 +2,8 @@ import { useState } from "react";
 import type { IMenuItem } from "../types";
 import { FiEyeOff } from "react-icons/fi";
 import { BsCartPlus, BsEye } from "react-icons/bs";
-import { BiTrash } from "react-icons/bi";
+import { BiPencil, BiTrash } from "react-icons/bi";
+import EditMenuItemModal from "./EditMenuItemModal";
 import { VscLoading } from "react-icons/vsc";
 import axios from "axios";
 import { restaurantService } from "../main";
@@ -18,6 +19,7 @@ interface MenuItemsProps {
 
 const MenuItems = ({ items, onItemDeleted, isSeller }: MenuItemsProps) => {
   const [loadingItemId, setLoadingItemId] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<IMenuItem | null>(null);
 
   const handleDelete = async (itemId: string) => {
     const confirm = window.confirm("Are you sure you want to delete this item");
@@ -91,6 +93,13 @@ const MenuItems = ({ items, onItemDeleted, isSeller }: MenuItemsProps) => {
 
   return (
     <div className="space-y-3">
+      {editingItem && (
+        <EditMenuItemModal
+          item={editingItem}
+          onClose={() => setEditingItem(null)}
+          onUpdated={onItemDeleted}
+        />
+      )}
       {items.map((item) => {
         const isLoading = loadingItemId === item._id;
 
@@ -131,6 +140,14 @@ const MenuItems = ({ items, onItemDeleted, isSeller }: MenuItemsProps) => {
 
                 {isSeller && (
                   <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setEditingItem(item)}
+                      className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                      title="Edit item"
+                    >
+                      <BiPencil size={18} />
+                    </button>
                     <button
                       type="button"
                       onClick={() => toggleAvailiblity(item._id)}

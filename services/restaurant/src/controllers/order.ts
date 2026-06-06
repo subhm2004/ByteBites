@@ -695,3 +695,128 @@ export const updateOrderStatusRider = TryCatch(async (req, res) => {
     });
   }
 });
+
+export const getOrderDispatchStatus = TryCatch(async (req, res) => {
+  if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+
+  const { orderId } = req.params;
+  const order = await Order.findById(orderId).select("status riderId");
+
+  if (!order) {
+    return res.status(404).json({ message: "Order not found" });
+  }
+
+  res.json({
+    status: order.status,
+    riderId: order.riderId,
+    assigned: order.riderId !== null,
+  });
+});
+
+export const getRiderEarningsAnalytics = TryCatch(async (req, res) => {
+  if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+
+  const { riderId } = req.query;
+
+  if (!riderId || typeof riderId !== "string") {
+    return res.status(400).json({ message: "Rider id is required" });
+  }
+
+  const orders = await Order.find({
+    riderId,
+    status: "delivered",
+  }).sort({ updatedAt: -1 });
+
+  const restaurantIds = [...new Set(orders.map((o) => o.restaurantId))];
+  const restaurants = await Restaurant.find({
+    _id: { $in: restaurantIds },
+  }).select("name autoLocation");
+
+  const restaurantById = new Map(
+    restaurants.map((r) => [r._id.toString(), r])
+  );
+
+  const now = new Date();
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+
+  const weekStart = new Date(now);
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  weekStart.setHours(0, 0, 0, 0);
+
+  let todayEarnings = 0;
+  let weekEarnings = 0;
+  let totalEarnings = 0;
+
+  for (const order of orders) {
+    totalEarnings += order.riderAmount;
+    const deliveredAt = new Date(order.updatedAt);
+    if (deliveredAt >= todayStart) todayEarnings += order.riderAmount;
+    if (deliveredAt >= weekStart) weekEarnings += order.riderAmount;
+  }
+
+  const daily: {
+    label: string;
+    date: string;
+    earnings: number;
+    trips: number;
+  }[] = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const start = new Date(now);
+    start.setDate(start.getDate() - i);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+
+    const dayOrders = orders.filter((order) => {
+      const deliveredAt = new Date(order.updatedAt);
+      return deliveredAt >= start && deliveredAt < end;
+    });
+
+    daily.push({
+      label: start.toLocaleDateString("en-IN", { weekday: "short" }),
+      date: start.toISOString().slice(0, 10),
+      earnings: dayOrders.reduce((sum, order) => sum + order.riderAmount, 0),
+      trips: dayOrders.length,
+    });
+  }
+
+  const trips = orders.slice(0, 30).map((order) => {
+    const restaurant = restaurantById.get(order.restaurantId);
+    const coords = restaurant?.autoLocation?.coordinates;
+
+    return {
+      _id: order._id,
+      restaurantName: order.restaurantName,
+      riderAmount: order.riderAmount,
+      distance: order.distance,
+      deliveredAt: order.updatedAt,
+      deliveryAddress: order.deliveryAddress.fromattedAddress,
+      pickup:
+        coords && coords.length === 2
+          ? { latitude: coords[1], longitude: coords[0] }
+          : null,
+      dropoff: {
+        latitude: order.deliveryAddress.latitude,
+        longitude: order.deliveryAddress.longitude,
+      },
+    };
+  });
+
+  res.json({
+    summary: {
+      todayEarnings,
+      weekEarnings,
+      totalEarnings,
+      totalTrips: orders.length,
+    },
+    daily,
+    trips,
+  });
+});

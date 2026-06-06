@@ -5,6 +5,7 @@ import {
   addRiderProfile,
   fetchMyCurrentOrder,
   fetchMyProfile,
+  fetchRiderEarnings,
   toggleRiderAvailablity,
   updateOrderStatus,
   updateRiderRating,
@@ -16,6 +17,7 @@ const router = express.Router();
 router.post("/new", isAuth, uploadFile, addRiderProfile);
 
 router.get("/myprofile", isAuth, fetchMyProfile);
+router.get("/earnings", isAuth, fetchRiderEarnings);
 router.patch("/toggle", isAuth, toggleRiderAvailablity);
 router.post("/accept/:orderId", isAuth, acceptOrder);
 router.get("/order/current", isAuth, fetchMyCurrentOrder);

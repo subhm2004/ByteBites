@@ -8,7 +8,9 @@ import {
   fetchSingleOrder,
   getCurrentOrderForRider,
   getMyOrders,
+  getOrderDispatchStatus,
   getRestaurantSalesAnalytics,
+  getRiderEarningsAnalytics,
   updateOrderStatus,
   updateOrderStatusRider,
 } from "../controllers/order.js";
@@ -33,6 +35,8 @@ router.get(
 );
 router.put("/:orderId", isAuth, isSeller, updateOrderStatus);
 router.put("/assign/rider", assignRiderToOrder);
+router.get("/rider/earnings", getRiderEarningsAnalytics);
+router.get("/rider/dispatch/:orderId", getOrderDispatchStatus);
 router.get("/current/rider", getCurrentOrderForRider);
 router.put("/update/status/rider", updateOrderStatusRider);
 

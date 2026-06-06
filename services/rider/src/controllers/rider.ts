@@ -308,6 +308,38 @@ export const updateOrderStatus = TryCatch(
   }
 );
 
+export const fetchRiderEarnings = TryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const rider = await Rider.findOne({ userId });
+
+    if (!rider) {
+      return res.status(404).json({ message: "Rider profile not found" });
+    }
+
+    try {
+      const { data } = await axios.get(
+        `${process.env.RESTAURANT_SERVICE || "http://localhost:5001"}/api/order/rider/earnings?riderId=${rider._id}`,
+        {
+          headers: {
+            "x-internal-key": process.env.INTERNAL_SERVICE_KEY,
+          },
+        }
+      );
+
+      res.json(data);
+    } catch (error: unknown) {
+      console.log(error);
+      res.status(500).json({ message: "Failed to fetch earnings" });
+    }
+  }
+);
+
 export const updateRiderRating = TryCatch(async (req, res) => {
   if (req.headers["x-internal-key"] !== process.env.INTERNAL_SERVICE_KEY) {
     return res.status(403).json({ message: "Forbidden" });

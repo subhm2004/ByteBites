@@ -163,3 +163,67 @@ export const toggleMenuItemAvailability = TryCatch(
     });
   }
 );
+
+export const updateMenuItem = TryCatch(async (req: AuthenticatedRequest, res) => {
+  if (!req.user) {
+    return res.status(401).json({ message: "Please login" });
+  }
+
+  const { itemId } = req.params;
+  if (!itemId) {
+    return res.status(400).json({ message: "Id is required" });
+  }
+
+  const item = await MenuItems.findById(itemId);
+  if (!item) {
+    return res.status(404).json({ message: "No item found" });
+  }
+
+  const restaurant = await Restaurant.findOne({
+    _id: item.restaurantId,
+    ownerId: req.user._id,
+  });
+
+  if (!restaurant) {
+    return res.status(403).json({ message: "Not allowed" });
+  }
+
+  const { name, description, price } = req.body;
+
+  if (name !== undefined && !String(name).trim()) {
+    return res.status(400).json({ message: "Name cannot be empty" });
+  }
+
+  if (name !== undefined) item.name = String(name).trim();
+  if (description !== undefined) item.description = String(description).trim();
+
+  if (price !== undefined) {
+    const numericPrice = Number(price);
+    if (Number.isNaN(numericPrice) || numericPrice <= 0) {
+      return res.status(400).json({ message: "Invalid price" });
+    }
+    item.price = numericPrice;
+  }
+
+  const file = req.file;
+  if (file) {
+    const fileBuffer = getBuffer(file);
+    if (!fileBuffer?.content) {
+      return res.status(500).json({ message: "Failed to create file buffer" });
+    }
+
+    const { data: uploadResult } = await axios.post(
+      `${process.env.UTILS_SERVICE}/api/upload`,
+      { buffer: fileBuffer.content }
+    );
+
+    item.image = uploadResult.url;
+  }
+
+  await item.save();
+
+  res.json({
+    message: "Item updated successfully",
+    item,
+  });
+});
