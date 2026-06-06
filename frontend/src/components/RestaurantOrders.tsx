@@ -105,7 +105,7 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
   }, [socket]);
 
   if (loading) {
-    return <p className="text-gray-500">Loading Orders</p>;
+    return <p className="text-gray-500 dark:text-gray-400">Loading Orders</p>;
   }
 
   const activeOrders = orders.filter((o) => ACTIVE_STATUSES.includes(o.status));
@@ -115,14 +115,14 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
   return (
     <div className="space-y-6">
       {!audioUnlocked && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+        <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/50 dark:bg-blue-950/40">
           <div className="flex items-center gap-3">
             <span className="text-2xl">🔔</span>
             <div>
-              <p className="font-medium text-blue-900">
+              <p className="font-medium text-blue-900 dark:text-blue-200">
                 Enable Sound Notification
               </p>
-              <p className="text-sm text-blue-700">
+              <p className="text-sm text-blue-700 dark:text-blue-300/80">
                 Get Notified when new orders arrive
               </p>
             </div>
@@ -130,7 +130,7 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
 
           <button
             onClick={unlockAudio}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition"
+            className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500"
           >
             Enable sound
           </button>
@@ -139,10 +139,10 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
 
       {/* Active orders */}
       <div className="space-y-3">
-        <h3 className="text-lg font-semibold">Active Orders</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Active Orders</h3>
 
         {activeOrders.length === 0 ? (
-          <p className="text-sm text-gray-500">No Acitve orders</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">No Acitve orders</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {activeOrders.map((order) => (
@@ -157,10 +157,10 @@ const RestaurantOrders = ({ restaurantId }: { restaurantId: string }) => {
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-lg font-semibold">Completed Orders</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Completed Orders</h3>
 
         {completedOrders.length === 0 ? (
-          <p className="text-sm text-gray-500">No completed orders</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">No completed orders</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {completedOrders.map((order) => (

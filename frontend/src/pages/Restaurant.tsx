@@ -7,6 +7,12 @@ import RestaurantProfile from "../components/RestaurantProfile";
 import MenuItems from "../components/MenuItems";
 import AddMenuItem from "../components/AddMenuItem";
 import RestaurantOrders from "../components/RestaurantOrders";
+import {
+  AppCard,
+  AppTabs,
+  LoadingScreen,
+  RoleShell,
+} from "../components/ui/AppUI";
 
 type SellerTab = "menu" | "add-item" | "sales";
 
@@ -68,62 +74,72 @@ const Restaurant = () => {
     }
   }, [restaurant]);
 
-  if (loading)
+  if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-gray-500">Loading your restaurant...</p>
-      </div>
+      <RoleShell>
+        <LoadingScreen message="Loading your restaurant..." />
+      </RoleShell>
     );
+  }
 
   if (!restaurant) {
-    return <AddRestaurant fetchMyRestaurant={fetchMyRestaurant} />;
+    return (
+      <RoleShell>
+        <AddRestaurant fetchMyRestaurant={fetchMyRestaurant} />
+      </RoleShell>
+    );
   }
+
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-6 space-y-6">
-      <RestaurantProfile
-        restaurant={restaurant}
-        onUpdate={setRestaurant}
-        isSeller={true}
-      />
-
-      <RestaurantOrders restaurantId={restaurant._id} />
-
-      <div className="rounded-xl bg-white shadow-sm">
-        <div className="flex border-b">
-          {[
-            { key: "menu", label: "Menu Items" },
-            { key: "add-item", label: "Add Item" },
-            { key: "sales", label: "Sales" },
-          ].map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key as SellerTab)}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition ${
-                tab === t.key
-                  ? "border-b-2 border-red-500 text-red-500"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+    <RoleShell>
+      <div className="mx-auto max-w-3xl space-y-6">
+        <div className="rounded-xl bg-[#E23744]/10 px-4 py-2 text-center text-sm font-semibold text-[#E23744]">
+          🍽️ Restaurant Partner Dashboard
         </div>
 
-        <div className="p-5">
-          {tab === "menu" && (
-            <MenuItems
-              items={menuItems}
-              onItemDeleted={() => fetchMenuItems(restaurant._id)}
-              isSeller={true}
+        <RestaurantProfile
+          restaurant={restaurant}
+          onUpdate={setRestaurant}
+          isSeller={true}
+        />
+
+        <RestaurantOrders restaurantId={restaurant._id} />
+
+        <AppCard className="!p-0 overflow-hidden">
+          <div className="border-b border-gray-100 p-4 dark:border-gray-800">
+            <AppTabs
+              tabs={[
+                { key: "menu", label: "Menu" },
+                { key: "add-item", label: "Add item" },
+                { key: "sales", label: "Sales" },
+              ]}
+              active={tab}
+              onChange={(k) => setTab(k as SellerTab)}
             />
-          )}
-          {tab === "add-item" && (
-            <AddMenuItem onItemAdded={() => fetchMenuItems(restaurant._id)} />
-          )}
-          {tab === "sales" && <p>Sales Page</p>}
-        </div>
+          </div>
+
+          <div className="p-5">
+            {tab === "menu" && (
+              <MenuItems
+                items={menuItems}
+                onItemDeleted={() => fetchMenuItems(restaurant._id)}
+                isSeller={true}
+              />
+            )}
+            {tab === "add-item" && (
+              <AddMenuItem onItemAdded={() => fetchMenuItems(restaurant._id)} />
+            )}
+            {tab === "sales" && (
+              <div className="py-12 text-center">
+                <span className="text-4xl">📊</span>
+                <p className="mt-3 font-semibold text-gray-700 dark:text-gray-200">Sales analytics</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500">Coming soon</p>
+              </div>
+            )}
+          </div>
+        </AppCard>
       </div>
-    </div>
+    </RoleShell>
   );
 };
 

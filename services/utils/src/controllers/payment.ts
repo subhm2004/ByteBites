@@ -56,6 +56,8 @@ export const verifyRazorpayPayment = async (req: Request, res: Response) => {
 
   res.json({
     message: "Payment verified successfully",
+    orderId,
+    paymentId: razorpay_payment_id,
   });
 };
 
@@ -143,6 +145,8 @@ export const verifyStripe = async (req: Request, res: Response) => {
 
     res.json({
       message: "payment verified successfully",
+      orderId,
+      paymentId: sessionId,
     });
   } catch (error) {
     res.status(500).json({

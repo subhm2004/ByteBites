@@ -51,29 +51,29 @@ const AddMenuItem = ({ onItemAdded }: { onItemAdded: () => void }) => {
   };
   return (
     <div className="max-w-md space-y-4 m-auto">
-      <h2 className="text-lg font-semibold">Add Menu Item</h2>
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Add Menu Item</h2>
       <input
         type="text"
         placeholder="Item name"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        className="w-full rounded-lg border px-4 py-2 text-sm outline-none"
+        className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
       />
       <textarea
         placeholder="Item description"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        className="w-full rounded-lg border px-4 py-2 text-sm outline-none"
+        className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
       />
       <input
         type="number"
         placeholder="price ₹"
         value={price}
         onChange={(e) => setPrice(e.target.value)}
-        className="w-full rounded-lg border px-4 py-2 text-sm outline-none"
+        className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-900 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white"
       />
 
-      <label className="flex cursor-pointer items-center gap-3 rounded-lg border p-4 text-sm text-gray-600 hover:bg-gray-50">
+      <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 p-4 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
         <BiUpload className="h-5 w-5 text-red-500" />
         {image ? image.name : "Upload restaurant image"}
         <input

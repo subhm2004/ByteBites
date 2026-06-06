@@ -2,6 +2,8 @@ import axios from "axios";
 import { adminService } from "../main";
 import toast from "react-hot-toast";
 import type { IRestaurant } from "../types";
+import { AppButton, AppCard } from "./ui/AppUI";
+import { BiMapPin, BiPhone } from "react-icons/bi";
 
 const AdminRestaurantCard = ({
   restaurant,
@@ -27,24 +29,28 @@ const AdminRestaurantCard = ({
       toast.error("failed ot verify restaurant");
     }
   };
+
   return (
-    <div className="rounded-xl bg-white p-4 shadow space-y-2">
+    <AppCard className="overflow-hidden !p-0">
       <img
         src={restaurant.image}
-        className="h-40 w-full object-cover rounded"
+        className="h-44 w-full object-cover"
         alt=""
       />
-      <h3>{restaurant.name}</h3>
-      <p className="text-sm text-gray-500">{restaurant.phone}</p>
-      <p>{restaurant.autoLocation?.formattedAddress}</p>
-
-      <button
-        className="w-full rounded bg-green-500 py-2 text-white hover:bg-green-600"
-        onClick={verify}
-      >
-        Verify Restaurant
-      </button>
-    </div>
+      <div className="space-y-3 p-4">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">{restaurant.name}</h3>
+        <p className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+          <BiPhone className="text-[#E23744]" /> {restaurant.phone}
+        </p>
+        <p className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+          <BiMapPin className="mt-0.5 shrink-0 text-[#E23744]" />
+          {restaurant.autoLocation?.formattedAddress}
+        </p>
+        <AppButton onClick={verify} className="!bg-emerald-600 hover:!bg-emerald-700">
+          ✓ Verify restaurant
+        </AppButton>
+      </div>
+    </AppCard>
   );
 };
 

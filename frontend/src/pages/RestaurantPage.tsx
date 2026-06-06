@@ -5,6 +5,7 @@ import axios from "axios";
 import { restaurantService } from "../main";
 import RestaurantProfile from "../components/RestaurantProfile";
 import MenuItems from "../components/MenuItems";
+import { AppCard, AppPage, LoadingScreen, PageHeader } from "../components/ui/AppUI";
 
 const RestaurantPage = () => {
   const { id } = useParams();
@@ -57,36 +58,42 @@ const RestaurantPage = () => {
   }, [id]);
 
   if (loading) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <p className="text-gray-500">Loading restaurant...</p>
-      </div>
-    );
+    return <LoadingScreen message="Loading restaurant..." />;
   }
 
   if (!restaurant) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <p className="text-gray-500">No Restaurant with this id</p>
-      </div>
+      <AppPage>
+        <p className="text-center text-gray-500">Restaurant not found</p>
+      </AppPage>
     );
   }
-  return (
-    <div className="min-h-screen bg-gray-50 px-4 py-6 space-y-6">
-      <RestaurantProfile
-        restaurant={restaurant}
-        onUpdate={setRestaurant}
-        isSeller={false}
-      />
 
-      <div className="rounded-xl bg-white shadow-sm p-4">
-        <MenuItems
+  return (
+    <AppPage>
+      <div className="mx-auto max-w-3xl space-y-6">
+        <RestaurantProfile
+          restaurant={restaurant}
+          onUpdate={setRestaurant}
           isSeller={false}
-          items={menuItems}
-          onItemDeleted={() => {}}
         />
+
+        <div>
+          <PageHeader
+            eyebrow="Menu"
+            title="What's on the menu"
+            subtitle={`${menuItems.length} items available`}
+          />
+          <AppCard>
+            <MenuItems
+              isSeller={false}
+              items={menuItems}
+              onItemDeleted={() => {}}
+            />
+          </AppCard>
+        </div>
       </div>
-    </div>
+    </AppPage>
   );
 };
 

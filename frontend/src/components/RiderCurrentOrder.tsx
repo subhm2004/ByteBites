@@ -29,10 +29,10 @@ const RiderCurrentOrder = ({ order, onStatusUpdate }: Props) => {
     }
   };
   return (
-    <div className="rounded-xl bg-white shadow-sm p-4 space-y-4">
-      <h1 className="font-semibold text-gray-800">Current Order</h1>
+    <div className="space-y-4 rounded-xl border border-gray-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 dark:shadow-none">
+      <h1 className="font-semibold text-gray-800 dark:text-white">Current Order</h1>
 
-      <div className="text-sm text-gray-600 space-y-1">
+      <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
         <p>
           <b>Pickup:</b>
           {order.restaurantName}
@@ -49,17 +49,17 @@ const RiderCurrentOrder = ({ order, onStatusUpdate }: Props) => {
         </p>
         <p>
           <b>Status:</b>
-          <span className="capitalize text-blue-600">
+          <span className="capitalize text-blue-600 dark:text-blue-400">
             {order.status.replace("_", " ")}
           </span>
         </p>
       </div>
 
       {order.deliveryAddress.mobile && (
-        <div className="flex items-center justify-between rounded-lg border p-3">
+        <div className="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-700">
           <div className="text-sm">
-            <p className="text-gray-500">Customer Phone</p>
-            <p className="font-semibold text-gray-800">
+            <p className="text-gray-500 dark:text-gray-400">Customer Phone</p>
+            <p className="font-semibold text-gray-800 dark:text-white">
               {order.deliveryAddress.mobile}
             </p>
           </div>

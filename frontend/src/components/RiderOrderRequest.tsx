@@ -50,7 +50,7 @@ const RiderOrderRequest = ({ orderId, onAccepted }: Props) => {
     }
   };
   return (
-    <div className="rounded-xl bg-white p-4 shadow-sm border border-green-300 space-y-3">
+    <div className="space-y-3 rounded-xl border border-green-300 bg-white p-4 shadow-sm dark:border-emerald-800/50 dark:bg-gray-900 dark:shadow-none">
       <p className="text-center text-xs font-semibold text-red-600">
         Accept within {secondsLeft}
       </p>
@@ -59,7 +59,7 @@ const RiderOrderRequest = ({ orderId, onAccepted }: Props) => {
         New Delivery Request
       </p>
 
-      <p className="text-xs text-gray-600">
+      <p className="text-xs text-gray-600 dark:text-gray-300">
         Order ID: <b>{orderId.slice(-6)}</b>
       </p>
 

@@ -25,9 +25,12 @@ const App = () => {
 
   if (loading) {
     return (
-      <h1 className="text-2xl font-bold text-red-500 text-center mt-56">
-        Loading...
-      </h1>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gray-50 via-white to-red-50/20 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-[3px] border-[#E23744] border-t-transparent" />
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Loading ByteBites...</p>
+        </div>
+      </div>
     );
   }
 

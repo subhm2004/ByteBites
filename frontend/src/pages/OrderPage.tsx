@@ -5,13 +5,21 @@ import type { IOrder } from "../types";
 import axios from "axios";
 import { restaurantService } from "../main";
 import UserOrderMap from "../components/UserOrderMap";
+import {
+  AppCard,
+  AppPage,
+  LoadingScreen,
+  PageHeader,
+  StatusBadge,
+} from "../components/ui/AppUI";
+import DownloadReceiptButton from "../components/DownloadReceiptButton";
+import { MdDeliveryDining } from "react-icons/md";
 
 const OrderPage = () => {
   const { id } = useParams();
   const { socket } = useSocket();
 
   const [order, setOrder] = useState<IOrder | null>(null);
-
   const [loading, setLoading] = useState(true);
 
   const fetchOrder = async () => {
@@ -74,7 +82,6 @@ const OrderPage = () => {
       latitude: number;
       longitude: number;
     }) => {
-      console.log("Rider Location:", latitude, longitude);
       setRiderLocation([latitude, longitude]);
     };
 
@@ -86,80 +93,115 @@ const OrderPage = () => {
   }, [socket]);
 
   if (loading) {
-    return <p className="text-center text-gray-500">Loading order...</p>;
+    return <LoadingScreen message="Loading order details..." />;
   }
 
   if (!order) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <p className="text-gray-500">No order Found</p>
-      </div>
+      <AppPage narrow>
+        <p className="text-center text-gray-500">Order not found</p>
+      </AppPage>
     );
   }
+
+  const isLive =
+    order.status === "rider_assigned" || order.status === "picked_up";
+
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6 space-y-6">
-      <h1 className="text-xl font-bold">Order #{order._id.slice(-6)}</h1>
-      <div className="rounded-lg bg-blue-50 p-3 text-sm font-medium">
-        Status: <span className="capitalize">{order.status}</span>
-      </div>
+    <AppPage narrow>
+      <PageHeader
+        eyebrow="Order tracking"
+        title={`#${order._id.slice(-6).toUpperCase()}`}
+      />
 
-      <div className="rounded-xl bg-white p-4 shadow-sm space-y-2">
-        <h2 className="font-semibold">Items</h2>
-        {order.items.map((item, i) => (
-          <div className="flex justify-between text-sm" key={i}>
-            <span>
-              {item.name} x {item.quauntity}
+      <div className="space-y-4">
+        <AppCard className="flex items-center justify-between !py-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E23744]/10 text-[#E23744]">
+              <MdDeliveryDining className="h-5 w-5" />
             </span>
-            <span>₹{item.price * item.quauntity}</span>
+            <div>
+              <p className="text-sm text-gray-500">Status</p>
+              <StatusBadge status={order.status} />
+            </div>
           </div>
-        ))}
-      </div>
+          <p className="text-2xl font-black text-[#E23744]">
+            ₹{order.totalAmount}
+          </p>
+        </AppCard>
 
-      <div className="rounded-xl bg-white p-4 shadow-sm space-y-1">
-        <h2 className="font-semibold">Delivery Address</h2>
-        <p className="text-sm text-gray-600">
-          {order.deliveryAddress.fromattedAddress}
-        </p>
-        <p className="text-sm text-gray-600">
-          Mobile: {order.deliveryAddress.mobile}
-        </p>
-      </div>
+        {isLive && (
+          <AppCard className="!p-0 overflow-hidden">
+            {riderLocation ? (
+              <UserOrderMap
+                riderLocation={riderLocation}
+                deliveryLocation={[
+                  order.deliveryAddress.latitude!,
+                  order.deliveryAddress.longitude!,
+                ]}
+              />
+            ) : (
+              <div className="flex items-center justify-center gap-2 py-12 text-sm text-gray-500">
+                <div className="h-2 w-2 animate-pulse rounded-full bg-[#E23744]" />
+                Waiting for rider location...
+              </div>
+            )}
+          </AppCard>
+        )}
 
-      <div className="rounded-xl bg-white p-4 shadow-sm space-y-2">
-        <div className="flex justify-between text-sm">
-          <span>SubTotal</span> <span>₹{order.subtotal}</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span>Delivery Fee</span> <span>₹{order.deliveryFee}</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span>PlatForm Fee</span> <span>₹{order.platfromFee}</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span>Total</span> <span>₹{order.totalAmount}</span>
-        </div>
+        <AppCard className="space-y-3">
+          <h2 className="font-bold text-gray-900 dark:text-white">Items</h2>
+          {order.items.map((item, i) => (
+            <div className="flex justify-between text-sm" key={i}>
+              <span className="text-gray-600">
+                {item.name} × {item.quauntity}
+              </span>
+              <span className="font-medium">₹{item.price * item.quauntity}</span>
+            </div>
+          ))}
+        </AppCard>
 
-        <p className="text-xs text-gray-500">
-          Payment Method: {order.paymentMethod}
-        </p>
-        <p className="text-xs text-gray-500">
-          Payment Status: {order.paymentStatus}
-        </p>
-      </div>
+        <AppCard>
+          <h2 className="mb-2 font-bold text-gray-900 dark:text-white">Delivery address</h2>
+          <p className="text-sm text-gray-600">
+            {order.deliveryAddress.fromattedAddress}
+          </p>
+          <p className="mt-1 text-sm text-gray-500">
+            📞 {order.deliveryAddress.mobile}
+          </p>
+        </AppCard>
 
-      {(order.status === "rider_assigned" || order.status === "picked_up") &&
-        (riderLocation ? (
-          <UserOrderMap
-            riderLocation={riderLocation}
-            deliveryLocation={[
-              order.deliveryAddress.latitude!,
-              order.deliveryAddress.longitude!,
-            ]}
+        <AppCard className="space-y-2 text-sm">
+          <div className="flex justify-between text-gray-600">
+            <span>Subtotal</span>
+            <span>₹{order.subtotal}</span>
+          </div>
+          <div className="flex justify-between text-gray-600">
+            <span>Delivery fee</span>
+            <span>₹{order.deliveryFee}</span>
+          </div>
+          <div className="flex justify-between text-gray-600">
+            <span>Platform fee</span>
+            <span>₹{order.platfromFee}</span>
+          </div>
+          <div className="flex justify-between border-t border-gray-100 dark:border-gray-800 pt-2 font-bold">
+            <span>Total paid</span>
+            <span>₹{order.totalAmount}</span>
+          </div>
+          <p className="pt-1 text-xs capitalize text-gray-400">
+            {order.paymentMethod} · {order.paymentStatus}
+          </p>
+        </AppCard>
+
+        {order.paymentStatus === "paid" && (
+          <DownloadReceiptButton
+            order={order}
+            variant="primary"
+            label="Download receipt (PDF)"
           />
-        ) : (
-          <p>Waiting for rider location</p>
-        ))}
-    </div>
+        )}
+      </div>
+    </AppPage>
   );
 };
 

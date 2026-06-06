@@ -125,6 +125,7 @@ export interface IOrder {
 
   paymentMethod: "razorpay" | "stripe";
   paymentStatus: "pending" | "paid" | "failed";
+  paymentId?: string;
 
   expiresAt: Date;
 

@@ -5,6 +5,21 @@ import type { IRestaurant } from "../types";
 import axios from "axios";
 import { restaurantService } from "../main";
 import RestaurantCard from "../components/RestaurantCard";
+import {
+  AppPage,
+  EmptyState,
+  LoadingScreen,
+  PageHeader,
+} from "../components/ui/AppUI";
+
+const categories = [
+  { emoji: "🍕", label: "Pizza" },
+  { emoji: "🍔", label: "Burgers" },
+  { emoji: "🍣", label: "Sushi" },
+  { emoji: "🍛", label: "Indian" },
+  { emoji: "🥗", label: "Healthy" },
+  { emoji: "🍜", label: "Noodles" },
+];
 
 const Explore = () => {
   const { location } = useAppData();
@@ -71,29 +86,35 @@ const Explore = () => {
   }, [location, search]);
 
   if (loading || !location) {
-    return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#E23744] border-t-transparent" />
-          <p className="text-gray-500">Finding restaurants near you...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Finding restaurants near you..." />;
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Restaurants near you
-        </h1>
-        <p className="mt-1 text-sm text-gray-500">
-          {restaurants.length} places delivering to your location
-        </p>
-      </div>
+    <AppPage>
+      <PageHeader
+        eyebrow="Explore"
+        title={search ? `Results for "${search}"` : "Restaurants near you"}
+        subtitle={`${restaurants.length} places delivering to your location`}
+      />
+
+      {!search && (
+        <div className="mb-8 flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+          {categories.map((c) => (
+            <div
+              key={c.label}
+              className="flex shrink-0 flex-col items-center gap-2 rounded-2xl border border-gray-100 bg-white px-5 py-4 shadow-sm transition hover:border-[#E23744]/20 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-[#E23744]/30"
+            >
+              <span className="text-2xl">{c.emoji}</span>
+              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                {c.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {restaurants.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {restaurants.map((res) => {
             const [resLng, resLat] = res.autoLocation.coordinates;
 
@@ -117,13 +138,14 @@ const Explore = () => {
           })}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <span className="mb-4 text-5xl">🍽️</span>
-          <p className="text-lg font-medium text-gray-700">No restaurants found</p>
-          <p className="mt-1 text-sm text-gray-500">Try a different search term</p>
-        </div>
+        <EmptyState
+          variant="search"
+          emoji="🔍"
+          title="No restaurants found"
+          subtitle="Try a different search term or check your delivery address"
+        />
       )}
-    </div>
+    </AppPage>
   );
 };
 

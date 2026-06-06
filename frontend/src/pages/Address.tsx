@@ -13,12 +13,21 @@ import "../utils/leafletDefaultIcon";
 import { LuLocateFixed } from "react-icons/lu";
 import { BiLoader, BiPlus, BiTrash } from "react-icons/bi";
 import { getErrorMessage } from "../utils/errors";
+import {
+  AppButton,
+  AppCard,
+  AppInput,
+  AppPage,
+  LoadingScreen,
+  PageHeader,
+} from "../components/ui/AppUI";
+
 interface Address {
   _id: string;
   formattedAddress: string;
   mobile: number;
 }
-// 📍 Click-to-select location
+
 const LocationPicker = ({
   setLocation,
 }: {
@@ -31,7 +40,7 @@ const LocationPicker = ({
   });
   return null;
 };
-// 🎯 Locate me button
+
 const LocateMeButton = ({
   onLocate,
 }: {
@@ -54,27 +63,26 @@ const LocateMeButton = ({
   };
   return (
     <button
+      type="button"
       onClick={locateUser}
-      className="absolute right-3 top-3 z-1000 flex items-center gap-2
-rounded-lg bg-white px-3 py-2 text-sm shadow hover:bg-gray-100"
+      className="absolute right-3 top-3 z-[1000] flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium shadow-lg transition hover:bg-gray-50"
     >
-      <LuLocateFixed size={16} />
+      <LuLocateFixed size={16} className="text-[#E23744]" />
       Use current location
     </button>
   );
 };
+
 const AddAddressPage = () => {
   const [addresses, setAddresses] = useState<Address[]>([]);
-
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  // 📋 Form state
   const [mobile, setMobile] = useState("");
   const [formattedAddress, setFormattedAddress] = useState("");
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
-  // 🌍 Reverse geocoding
+
   const fetchFormattedAddress = async (lat: number, lng: number) => {
     try {
       const res = await fetch(
@@ -86,12 +94,13 @@ const AddAddressPage = () => {
       toast.error("Failed to fetch address");
     }
   };
+
   const setLocation = (lat: number, lng: number) => {
     setLatitude(lat);
     setLongitude(lng);
     fetchFormattedAddress(lat, lng);
   };
-  // 📡 Fetch addresses
+
   const fetchAddresses = async () => {
     try {
       const { data } = await axios.get(`${restaurantService}/api/address/all`, {
@@ -106,10 +115,11 @@ const AddAddressPage = () => {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     fetchAddresses();
   }, []);
-  // ➕ Add address
+
   const addAddress = async () => {
     if (
       !mobile ||
@@ -124,12 +134,7 @@ const AddAddressPage = () => {
       setAdding(true);
       await axios.post(
         `${restaurantService}/api/address/new`,
-        {
-          formattedAddress,
-          mobile,
-          latitude,
-          longitude,
-        },
+        { formattedAddress, mobile, latitude, longitude },
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -139,7 +144,6 @@ const AddAddressPage = () => {
       toast.success("Address added");
       setMobile("");
       setFormattedAddress("");
-
       setLatitude(null);
       setLongitude(null);
       fetchAddresses();
@@ -149,7 +153,7 @@ const AddAddressPage = () => {
       setAdding(false);
     }
   };
-  // 🗑 Delete address
+
   const deleteAddress = async (id: string) => {
     if (!window.confirm("Delete this address?")) return;
     try {
@@ -167,101 +171,91 @@ const AddAddressPage = () => {
       setDeletingId(null);
     }
   };
+
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 space-y-6">
-      <h1 className="text-2xl font-bold">Select Delivery Address</h1>
-      {/* 🗺 Map */}
-      <div
-        className="relative h-100 w-full overflow-hidden rounded-lg
-border"
-      >
-        <MapContainer
-          center={[latitude || 28.6139, longitude || 77.209]}
-          zoom={13}
-          className="h-full w-full"
-          style={{ height: "100%", width: "100%" }}
-        >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a
-href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          />
-          <LocationPicker setLocation={setLocation} />
-          <LocateMeButton onLocate={setLocation} />
-          {latitude && longitude && <Marker position={[latitude, longitude]} />}
-        </MapContainer>
-      </div>
-      {/* 📍 Selected address */}
-      {formattedAddress && (
-        <div className="rounded-lg border bg-green-50 p-3 text-sm">
-          📍 {formattedAddress}
-        </div>
-      )}
-      {/* 📱 Mobile */}
-      <input
-        type="number"
-        placeholder="Mobile number"
-        value={mobile}
-        onChange={(e) => setMobile(e.target.value)}
-        className="w-full rounded-lg border px-4 py-2"
+    <AppPage narrow>
+      <PageHeader
+        eyebrow="Delivery"
+        title="Your addresses"
+        subtitle="Tap on the map to pin your delivery location"
       />
-      {/* ➕ Save */}
-      <button
-        disabled={adding}
-        onClick={addAddress}
-        className="flex items-center justify-center gap-2 rounded-lg
 
-bg-[#E23744] px-4 py-3 text-white hover:bg-[#d32f3a] disabled:opacity-
-50"
-      >
-        {adding ? <BiLoader className="animate-spin" /> : <BiPlus />}
-        Save Address
-      </button>
-
-      {/* 📋 Saved Addresses */}
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Saved Addresses</h2>
-        {loading ? (
-          <p className="text-sm text-gray-500">Loading...</p>
-        ) : addresses.length === 0 ? (
-          <p className="text-sm text-gray-500">No addresses saved</p>
-        ) : (
-          addresses.map((addr) => (
-            <div
-              key={addr._id}
-              className="flex items-center justify-between rounded-lg
-border bg-white p-3"
+      <div className="space-y-5">
+        <AppCard className="overflow-hidden !p-0">
+          <div className="relative h-72 w-full sm:h-80">
+            <MapContainer
+              center={[latitude || 28.6139, longitude || 77.209]}
+              zoom={13}
+              className="h-full w-full"
+              style={{ height: "100%", width: "100%" }}
             >
-              <div>
-                <p
-                  className="text-sm font-
-medium"
-                >
-                  {addr.formattedAddress}
-                </p>
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; OpenStreetMap'
+              />
+              <LocationPicker setLocation={setLocation} />
+              <LocateMeButton onLocate={setLocation} />
+              {latitude && longitude && (
+                <Marker position={[latitude, longitude]} />
+              )}
+            </MapContainer>
+          </div>
+        </AppCard>
 
-                <p className="text-xs text-gray-500">
-                  📞
-                  {addr.mobile}
-                </p>
-              </div>
-              <button
-                onClick={() => deleteAddress(addr._id)}
-                disabled={deletingId === addr._id}
-                className="rounded-lg p-2 text-red-500 hover:bg-red-50
-disabled:opacity-50"
-              >
-                {deletingId === addr._id ? (
-                  <BiLoader size={16} className="animate-spin" />
-                ) : (
-                  <BiTrash size={16} />
-                )}
-              </button>
-            </div>
-          ))
+        {formattedAddress && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            📍 {formattedAddress}
+          </div>
         )}
+
+        <AppInput
+          type="number"
+          placeholder="Mobile number"
+          value={mobile}
+          onChange={(e) => setMobile(e.target.value)}
+        />
+
+        <AppButton disabled={adding} onClick={addAddress}>
+          {adding ? <BiLoader className="animate-spin" /> : <BiPlus />}
+          Save address
+        </AppButton>
+
+        <div className="space-y-3 pt-2">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500">
+            Saved addresses
+          </h2>
+
+          {loading ? (
+            <LoadingScreen message="Loading..." />
+          ) : addresses.length === 0 ? (
+            <p className="text-sm text-gray-400">No addresses saved yet</p>
+          ) : (
+            addresses.map((addr) => (
+              <AppCard key={addr._id} className="flex items-start justify-between gap-3 !p-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    {addr.formattedAddress}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">📞 {addr.mobile}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => deleteAddress(addr._id)}
+                  disabled={deletingId === addr._id}
+                  className="rounded-lg p-2 text-red-500 transition hover:bg-red-50 disabled:opacity-50"
+                >
+                  {deletingId === addr._id ? (
+                    <BiLoader size={16} className="animate-spin" />
+                  ) : (
+                    <BiTrash size={16} />
+                  )}
+                </button>
+              </AppCard>
+            ))
+          )}
+        </div>
       </div>
-    </div>
+    </AppPage>
   );
 };
 

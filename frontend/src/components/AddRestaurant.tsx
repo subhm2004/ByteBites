@@ -5,6 +5,7 @@ import axios from "axios";
 import { restaurantService } from "../main";
 import { BiMapPin, BiUpload } from "react-icons/bi";
 import { getErrorMessage } from "../utils/errors";
+import { AppButton, AppCard, AppInput } from "./ui/AppUI";
 
 interface props {
   fetchMyRestaurant: () => Promise<void>;
@@ -51,34 +52,43 @@ const AddRestaurant = ({ fetchMyRestaurant }: props) => {
       setSubmitting(false);
     }
   };
+
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-6">
-      <div className="mx-auto max-w-lg rounded-xl bg-white p-6 shadow-sm space-y-5">
-        <h1 className="text-xl font-semibold">Add Your Restaurant</h1>
-        <input
+    <div className="mx-auto max-w-lg">
+      <div className="mb-6 text-center">
+        <span className="text-4xl">🍽️</span>
+        <h1 className="mt-2 text-2xl font-black text-gray-900">
+          Register your restaurant
+        </h1>
+        <p className="text-sm text-gray-500">
+          Join ByteBites and start receiving orders
+        </p>
+      </div>
+
+      <AppCard className="space-y-4">
+        <AppInput
           type="text"
           placeholder="Restaurant name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full rounded-lg border px-4 py-2 text-sm outline-none"
         />
-        <input
+        <AppInput
           type="number"
-          placeholder="Contact Number"
+          placeholder="Contact number"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          className="w-full rounded-lg border px-4 py-2 text-sm outline-none"
         />
         <textarea
-          placeholder="Restaurant Description"
+          placeholder="Tell customers about your restaurant..."
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full rounded-lg border px-4 py-2 text-sm outline-none"
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-[#E23744]/40 focus:ring-2 focus:ring-[#E23744]/10"
+          rows={3}
         />
 
-        <label className="flex cursor-pointer items-center gap-3 rounded-lg border p-4 text-sm text-gray-600 hover:bg-gray-50">
-          <BiUpload className="h-5 w-5 text-red-500" />
-          {image ? image.name : "Upload restaurant image"}
+        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-600 transition hover:border-[#E23744]/30 hover:bg-red-50/30">
+          <BiUpload className="h-5 w-5 text-[#E23744]" />
+          {image ? image.name : "Upload restaurant cover photo"}
           <input
             type="file"
             accept="image/*"
@@ -87,23 +97,19 @@ const AddRestaurant = ({ fetchMyRestaurant }: props) => {
           />
         </label>
 
-        <div className="flex items-start gap-3 rounded-lg boder p-4">
-          <BiMapPin className="mt-0.5 h-5 w-5 text-red-500" />
-          <div className="text-sm">
+        <div className="flex items-start gap-3 rounded-xl bg-gray-50 p-4">
+          <BiMapPin className="mt-0.5 h-5 w-5 shrink-0 text-[#E23744]" />
+          <div className="text-sm text-gray-600">
             {loadingLocation
-              ? "Fetching you location..."
+              ? "Fetching your location..."
               : location?.formattedAddress || "Location not available"}
           </div>
         </div>
 
-        <button
-          className="w-full rounded-lg py-3 text-sm font-semibold text-white bg-[#e23744]"
-          disabled={submitting}
-          onClick={handleSubmit}
-        >
-          {submitting ? "Submitting..." : "Add Restaurant"}
-        </button>
-      </div>
+        <AppButton disabled={submitting} onClick={handleSubmit}>
+          {submitting ? "Submitting..." : "Register restaurant"}
+        </AppButton>
+      </AppCard>
     </div>
   );
 };

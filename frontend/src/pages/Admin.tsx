@@ -4,6 +4,14 @@ import { adminService } from "../main";
 import AdminRestaurantCard from "../components/AdminRestaurantCard";
 import RiderAdmin from "../components/RiderAdmin";
 import type { IRider, IRestaurant } from "../types";
+import {
+  AppCard,
+  AppTabs,
+  EmptyState,
+  LoadingScreen,
+  PageHeader,
+  RoleShell,
+} from "../components/ui/AppUI";
 
 const Admin = () => {
   const [restaurant, setRestaurant] = useState<IRestaurant[]>([]);
@@ -46,39 +54,42 @@ const Admin = () => {
 
   if (loading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <p className="text-gray-500">Loading admin panel...</p>
-      </div>
+      <RoleShell>
+        <LoadingScreen message="Loading admin panel..." />
+      </RoleShell>
     );
   }
+
   return (
-    <div className="mx-auto max-w-6xl px-6 py-6 space-y-6">
-      <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+    <RoleShell>
+      <PageHeader
+        eyebrow="Admin"
+        title="Verification dashboard"
+        subtitle="Review and approve pending restaurants & riders"
+      />
 
-      <div className="flex gap-4">
-        <button
-          onClick={() => setTab("restaurant")}
-          className={`px-4 py-2 rounded ${
-            tab === "restaurant" ? "bg-red-500 text-white" : "bg-gray-200"
-          }`}
-        >
-          Restaurant
-        </button>
-
-        <button
-          onClick={() => setTab("rider")}
-          className={`px-4 py-2 rounded ${
-            tab === "rider" ? "bg-red-500 text-white" : "bg-gray-200"
-          }`}
-        >
-          Riders
-        </button>
-      </div>
+      <AppCard className="mb-6 !p-2">
+        <AppTabs
+          tabs={[
+            { key: "restaurant", label: `Restaurants (${restaurant.length})` },
+            { key: "rider", label: `Riders (${riders.length})` },
+          ]}
+          active={tab}
+          onChange={(k) => setTab(k as "restaurant" | "rider")}
+        />
+      </AppCard>
 
       {tab === "restaurant" && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {restaurant.length === 0 ? (
-            <p>No pending restaurants</p>
+            <div className="col-span-full max-w-lg mx-auto w-full">
+              <EmptyState
+                variant="success"
+                emoji="🎉"
+                title="All caught up!"
+                subtitle="Every restaurant has been reviewed. New partner requests will show up here."
+              />
+            </div>
           ) : (
             restaurant.map((r) => (
               <AdminRestaurantCard
@@ -90,10 +101,18 @@ const Admin = () => {
           )}
         </div>
       )}
+
       {tab === "rider" && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {riders.length === 0 ? (
-            <p>No pending riders</p>
+            <div className="col-span-full max-w-lg mx-auto w-full">
+              <EmptyState
+                variant="success"
+                emoji="🎉"
+                title="All caught up!"
+                subtitle="Every rider has been verified. New applications will appear here."
+              />
+            </div>
           ) : (
             riders.map((r) => (
               <RiderAdmin key={r._id} rider={r} onVerify={fetchData} />
@@ -101,7 +120,7 @@ const Admin = () => {
           )}
         </div>
       )}
-    </div>
+    </RoleShell>
   );
 };
 

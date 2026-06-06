@@ -11,6 +11,13 @@ import audio from "../assets/faaah.mp3";
 import RiderOrderRequest from "../components/RiderOrderRequest";
 import RiderCurrentOrder from "../components/RiderCurrentOrder";
 import RiderOrderMap from "../components/RiderOrderMap";
+import {
+  AppButton,
+  AppCard,
+  AppInput,
+  LoadingScreen,
+  RoleShell,
+} from "../components/ui/AppUI";
 
 interface IRiderProfile extends IRider {
   isVerified: boolean;
@@ -23,12 +30,9 @@ const RiderDashboard = () => {
 
   const [profile, setProfile] = useState<IRiderProfile | null>(null);
   const [loading, setLoading] = useState(true);
-
   const [toggling, setToggling] = useState(false);
-
   const [incomingOrders, setIncomingOrders] = useState<string[]>([]);
   const [currentOrder, setCurrentOrder] = useState<IOrder | null>(null);
-
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -204,171 +208,182 @@ const RiderDashboard = () => {
 
   if (user?.role !== "rider") {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center text-gray-500">
-        You are not registered as a rider
-      </div>
+      <RoleShell>
+        <p className="py-20 text-center text-gray-500">
+          You are not registered as a rider
+        </p>
+      </RoleShell>
     );
   }
 
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center text-gray-500">
-        Loading rider details...
-      </div>
+      <RoleShell>
+        <LoadingScreen message="Loading rider profile..." />
+      </RoleShell>
     );
   }
 
-  if (!profile)
+  if (!profile) {
     return (
-      <div className="min-h-screen bg-gray-50 px-4 py-6">
-        <div className="mx-auto max-w-lg rounded-xl bg-white p-6 shadow-sm space-y-5">
-          <h1 className="text-xl font-semibold">Add Your Profile</h1>
-          <input
-            type="number"
-            placeholder="Aadhar number"
-            value={aadharNumber}
-            onChange={(e) => setaadharNumber(e.target.value)}
-            className="w-full rounded-lg border px-4 py-2 text-sm outline-none"
-          />
-          <input
-            type="number"
-            placeholder="Contact Number"
-            value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
-            className="w-full rounded-lg border px-4 py-2 text-sm outline-none"
-          />
-
-          <input
-            type="text"
-            placeholder="driving Licence"
-            value={drivingLicenseNumber}
-            onChange={(e) => setDrivingLicenseNumber(e.target.value)}
-            className="w-full rounded-lg border px-4 py-2 text-sm outline-none"
-          />
-
-          <label className="flex cursor-pointer items-center gap-3 rounded-lg border p-4 text-sm text-gray-600 hover:bg-gray-50">
-            <BiUpload className="h-5 w-5 text-red-500" />
-            {image ? image.name : "Upload your image"}
-            <input
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={(e) => setImage(e.target.files?.[0] || null)}
-            />
-          </label>
-
-          <button
-            className="w-full rounded-lg py-3 text-sm font-semibold text-white bg-[#e23744]"
-            disabled={submitting}
-            onClick={handleSubmit}
-          >
-            {submitting ? "Submitting..." : "Add Profile"}
-          </button>
-        </div>
-      </div>
-    );
-  return (
-    <div className="space-y-4">
-      <div className="mx-auto max-w-md px-4 py-4">
-        <div className="rounded-xl bg-white p-4 shadow space-y-3">
-          <img
-            src={profile.picture}
-            className="mx-auto h-24 w-24 rounded-full object-cover"
-            alt=""
-          />
-          <p className="text-center font-semibold">{user?.name}</p>
-          <p className="text-center text-sm text-gray-500">
-            {profile.phoneNumber}
-          </p>
-
-          <div className="flex justify-center gap-2">
-            <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-600">
-              {profile.isVerified ? "Verified" : "Pending"}
-            </span>
-
-            <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-600">
-              {profile.isAvailble ? "Online" : "Offline"}
-            </span>
-          </div>
-
-          <div>
-            <p className="text-blue-400">
-              Please be within a 500 m radius of any restaurant (which we call a
-              hotspot) before going online as a rider to receive orders.
+      <RoleShell>
+        <div className="mx-auto max-w-lg">
+          <div className="mb-6 text-center">
+            <span className="text-4xl">🛵</span>
+            <h1 className="mt-2 text-2xl font-black text-gray-900 dark:text-white">
+              Join as a rider
+            </h1>
+            <p className="text-sm text-gray-500">
+              Complete your profile to start delivering
             </p>
           </div>
 
+          <AppCard className="space-y-4">
+            <AppInput
+              type="number"
+              placeholder="Aadhar number"
+              value={aadharNumber}
+              onChange={(e) => setaadharNumber(e.target.value)}
+            />
+            <AppInput
+              type="number"
+              placeholder="Contact number"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+            />
+            <AppInput
+              type="text"
+              placeholder="Driving licence number"
+              value={drivingLicenseNumber}
+              onChange={(e) => setDrivingLicenseNumber(e.target.value)}
+            />
+
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-gray-300 p-4 text-sm text-gray-600 transition hover:border-[#E23744]/30 hover:bg-red-50/30">
+              <BiUpload className="h-5 w-5 text-[#E23744]" />
+              {image ? image.name : "Upload profile photo"}
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => setImage(e.target.files?.[0] || null)}
+              />
+            </label>
+
+            <AppButton disabled={submitting} onClick={handleSubmit}>
+              {submitting ? "Submitting..." : "Submit profile"}
+            </AppButton>
+          </AppCard>
+        </div>
+      </RoleShell>
+    );
+  }
+
+  return (
+    <RoleShell>
+      <div className="mx-auto max-w-lg space-y-4">
+        <div className="rounded-xl bg-[#E23744]/10 px-4 py-2 text-center text-sm font-semibold text-[#E23744]">
+          🛵 Rider Dashboard
+        </div>
+
+        <AppCard className="text-center">
+          <img
+            src={profile.picture}
+            className="mx-auto h-24 w-24 rounded-2xl object-cover ring-4 ring-gray-100"
+            alt=""
+          />
+          <p className="mt-3 text-lg font-bold text-gray-900 dark:text-white">{user?.name}</p>
+          <p className="text-sm text-gray-500">{profile.phoneNumber}</p>
+
+          <div className="mt-3 flex justify-center gap-2">
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                profile.isVerified
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-amber-50 text-amber-700"
+              }`}
+            >
+              {profile.isVerified ? "✓ Verified" : "⏳ Pending verification"}
+            </span>
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                profile.isAvailble
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-gray-100 text-gray-600"
+              }`}
+            >
+              {profile.isAvailble ? "🟢 Online" : "⚫ Offline"}
+            </span>
+          </div>
+
+          <p className="mt-4 rounded-xl bg-blue-50 px-3 py-2 text-xs leading-relaxed text-blue-800">
+            Stay within 500m of a restaurant hotspot before going online to
+            receive orders.
+          </p>
+
           {profile.isVerified && !currentOrder && (
-            <button
+            <AppButton
+              className="mt-4"
+              variant={profile.isAvailble ? "secondary" : "primary"}
               onClick={toggleAvailiblity}
               disabled={toggling}
-              className={`w-full py-2 rounded-lg text-white font-semibold ${
-                toggling
-                  ? "bg-gray-400"
-                  : profile.isAvailble
-                  ? "bg-gray-600"
-                  : "bg-[#e23744]"
-              }`}
             >
               {toggling
                 ? "Updating..."
                 : profile.isAvailble
-                ? "Go Offline"
-                : "Go Online"}
-            </button>
+                ? "Go offline"
+                : "Go online"}
+            </AppButton>
           )}
-        </div>
-      </div>
+        </AppCard>
 
-      {!audioUnlocked && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">🔔</span>
-            <div>
-              <p className="font-medium text-blue-900">
-                Enable Sound Notification
-              </p>
-              <p className="text-sm text-blue-700">
-                Get Notified when new orders arrive
-              </p>
+        {!audioUnlocked && (
+          <AppCard className="flex items-center justify-between gap-3 !py-4">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🔔</span>
+              <div className="text-left">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  Enable sound alerts
+                </p>
+                <p className="text-xs text-gray-500">Get notified for new orders</p>
+              </div>
             </div>
+            <AppButton onClick={unlockAudio} className="!w-auto shrink-0 px-4">
+              Enable
+            </AppButton>
+          </AppCard>
+        )}
+
+        {profile.isAvailble && incomingOrders.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500">
+              Incoming orders
+            </h3>
+            {incomingOrders.map((id) => (
+              <RiderOrderRequest
+                key={id}
+                orderId={id}
+                onAccepted={() => {
+                  fetchProfile();
+                  fetchCurrentOrder();
+                }}
+              />
+            ))}
           </div>
+        )}
 
-          <button
-            onClick={unlockAudio}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition"
-          >
-            Enable sound
-          </button>
-        </div>
-      )}
-
-      {profile.isAvailble && incomingOrders.length > 0 && (
-        <div className="mx-auto max-w-md px-4 space-y-3">
-          <h3 className=" font-semibold text-gray-700">Incoming Orders</h3>
-          {incomingOrders.map((id) => (
-            <RiderOrderRequest
-              key={id}
-              orderId={id}
-              onAccepted={() => {
-                fetchProfile();
-                fetchCurrentOrder();
-              }}
+        {currentOrder && (
+          <div className="space-y-4">
+            <RiderCurrentOrder
+              order={currentOrder}
+              onStatusUpdate={fetchCurrentOrder}
             />
-          ))}
-        </div>
-      )}
-
-      {currentOrder && (
-        <div className="mx-auto max-w-md px-4 space-y-4">
-          <RiderCurrentOrder
-            order={currentOrder}
-            onStatusUpdate={fetchCurrentOrder}
-          />
-          <RiderOrderMap order={currentOrder} />
-        </div>
-      )}
-    </div>
+            <AppCard className="!p-0 overflow-hidden">
+              <RiderOrderMap order={currentOrder} />
+            </AppCard>
+          </div>
+        )}
+      </div>
+    </RoleShell>
   );
 };
 

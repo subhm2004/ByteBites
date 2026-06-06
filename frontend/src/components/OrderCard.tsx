@@ -14,19 +14,19 @@ interface props {
 const statusColor = (status: string) => {
   switch (status) {
     case "placed":
-      return "bg-yellow-100 text-yellow-700";
+      return "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/50 dark:text-yellow-400";
     case "accepted":
-      return "bg-orange-100 text-orange-700";
+      return "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400";
     case "preparing":
-      return "bg-blue-100 text-blue-700";
+      return "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400";
     case "ready_for_rider":
-      return "bg-indigo-100 text-indigo-700";
+      return "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400";
     case "picked_up":
-      return "bg-purple-100 text-purple-700";
+      return "bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-400";
     case "delivered":
-      return "bg-green-100 text-green-700";
+      return "bg-green-100 text-green-700 dark:bg-emerald-950/50 dark:text-emerald-400";
     default:
-      return "bg-gray-100 text-gray-700";
+      return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
   }
 };
 
@@ -71,13 +71,16 @@ const OrderCard = ({ order, onStatusUpdate }: props) => {
       setLoading(false);
     }
   };
+
   return (
-    <div className="rounded-xl bg-white p-4 shadow-sm space-y-3">
-      <div className="flex justify-between items-center">
-        <p className="text-sm font-medium">Order #{order._id.slice(-6)}</p>
+    <div className="space-y-3 rounded-xl border border-gray-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 dark:shadow-none">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-gray-900 dark:text-white">
+          Order #{order._id.slice(-6)}
+        </p>
 
         <span
-          className={`rounded-full px-3 py-1 text-xs font-medium ${statusColor(
+          className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${statusColor(
             order.status
           )}`}
         >
@@ -85,7 +88,7 @@ const OrderCard = ({ order, onStatusUpdate }: props) => {
         </span>
       </div>
 
-      <div className="text-sm text-gray-600 space-y-1">
+      <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
         {order.items.map((item, i) => (
           <p key={i}>
             {item.name} x {item.quauntity}
@@ -93,12 +96,14 @@ const OrderCard = ({ order, onStatusUpdate }: props) => {
         ))}
       </div>
 
-      <div className="flex justify-between text-sm font-medium">
+      <div className="flex justify-between text-sm font-medium text-gray-900 dark:text-white">
         <span>Total</span>
         <span>₹{order.totalAmount}</span>
       </div>
 
-      <p className="text-xs text-gray-400">Payment: {order.paymentStatus}</p>
+      <p className="text-xs capitalize text-gray-400 dark:text-gray-500">
+        Payment: {order.paymentStatus}
+      </p>
 
       {order.paymentStatus === "paid" && actions.length > 0 && (
         <div className="flex flex-wrap gap-2 pt-2">
@@ -118,7 +123,7 @@ const OrderCard = ({ order, onStatusUpdate }: props) => {
       {order.status === "ready_for_rider" && retryVisible && (
         <div className="pt-2">
           <button
-            className="w-full rounded-lg border border-[#e23744] py-2 text-xs font-semibold text-[#e23744] hover:bg-red-50 disabled:opacity-50"
+            className="w-full rounded-lg border border-[#e23744] py-2 text-xs font-semibold text-[#e23744] hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-950/40"
             onClick={() => updateStatus("ready_for_rider")}
           >
             Retry Ready for Rider

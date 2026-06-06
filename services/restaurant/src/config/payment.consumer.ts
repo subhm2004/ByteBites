@@ -16,7 +16,7 @@ export const startPaymentConsumer = async () => {
         return;
       }
 
-      const { orderId } = event.data;
+      const { orderId, paymentId } = event.data;
 
       const order = await Order.findOneAndUpdate(
         {
@@ -27,6 +27,7 @@ export const startPaymentConsumer = async () => {
           $set: {
             paymentStatus: "paid",
             status: "placed",
+            paymentId: paymentId || null,
           },
           $unset: {
             expiresAt: 1,
