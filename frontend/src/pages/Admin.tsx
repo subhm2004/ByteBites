@@ -5,6 +5,7 @@ import AdminRestaurantCard from "../components/AdminRestaurantCard";
 import RiderAdmin from "../components/RiderAdmin";
 import AdminCouponPanel from "../components/AdminCouponPanel";
 import AdminUserPanel from "../components/AdminUserPanel";
+import AdminPlatformAnalytics from "../components/AdminPlatformAnalytics";
 import type { IRider, IRestaurant } from "../types";
 import {
   AppCard,
@@ -15,13 +16,13 @@ import {
   RoleShell,
 } from "../components/ui/AppUI";
 
-type AdminTab = "users" | "restaurant" | "rider" | "coupons";
+type AdminTab = "analytics" | "users" | "restaurant" | "rider" | "coupons";
 
 const Admin = () => {
   const [restaurant, setRestaurant] = useState<IRestaurant[]>([]);
   const [riders, setRiders] = useState<IRider[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<AdminTab>("users");
+  const [tab, setTab] = useState<AdminTab>("analytics");
 
   const fetchData = async () => {
     try {
@@ -69,12 +70,13 @@ const Admin = () => {
       <PageHeader
         eyebrow="Admin"
         title="Admin dashboard"
-        subtitle="Manage users, verify partners, and coupons"
+        subtitle="Platform GMV, users, verify partners, and coupons"
       />
 
       <AppCard className="mb-6 !p-2">
         <AppTabs
           tabs={[
+            { key: "analytics", label: "Analytics" },
             { key: "users", label: "Users" },
             { key: "restaurant", label: `Restaurants (${restaurant.length})` },
             { key: "rider", label: `Riders (${riders.length})` },
@@ -84,6 +86,8 @@ const Admin = () => {
           onChange={(k) => setTab(k as AdminTab)}
         />
       </AppCard>
+
+      {tab === "analytics" && <AdminPlatformAnalytics />}
 
       {tab === "users" && <AdminUserPanel />}
 

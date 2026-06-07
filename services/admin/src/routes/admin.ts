@@ -14,8 +14,11 @@ import {
   updateCoupon,
 } from "../controllers/coupon.js";
 import { listUsers, setUserBanStatus } from "../controllers/users.js";
+import { getPlatformAnalytics } from "../controllers/analytics.js";
 
 const router = express.Router();
+
+router.get("/admin/analytics", isAuth, isAdmin, getPlatformAnalytics);
 
 router.get("/admin/restaurant/pending", isAuth, isAdmin, getPendingRestaurant);
 router.get("/admin/rider/pending", isAuth, isAdmin, getPendingRiders);
