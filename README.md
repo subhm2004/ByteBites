@@ -873,7 +873,7 @@ RAZORPAY_KEY_SECRET=xxxx
 FRONTEND_URL=http://localhost:5173
 RESTAURANT_SERVICE=http://localhost:5001
 INTERNAL_SERVICE_KEY=your-internal-service-key
-RABBITMQ_URL=amqp://admin:admin123@localhost:5672
+RABBITMQ_URL=amqp://admin:shubham0401@16.171.41.187:5672
 PAYMENT_QUEUE=payment_event
 ```
 
@@ -924,9 +924,16 @@ DB_NAME=Zomato_Clone
 <summary><b>Frontend</b> — <code>frontend/.env</code></summary>
 
 ```env
+VITE_AUTH_SERVICE=http://localhost:5007
+VITE_RESTAURANT_SERVICE=http://localhost:5001
+VITE_UTILS_SERVICE=http://localhost:5002
+VITE_REALTIME_SERVICE=http://localhost:5004
+VITE_RIDER_SERVICE=http://localhost:5005
+VITE_ADMIN_SERVICE=http://localhost:5006
 VITE_GOOGLE_CLIENT_ID=your-google-client-id
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_xxxx
 VITE_INTERNAL_SERVICE_KEY=your-internal-service-key
+```
 ```
 
 </details>
