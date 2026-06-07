@@ -255,9 +255,17 @@ const Checkout = () => {
     }
   };
 
-  const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+  const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+  const stripePromise = stripePublishableKey
+    ? loadStripe(stripePublishableKey)
+    : null;
 
   const payWithStripe = async () => {
+    if (!stripePromise) {
+      toast.error("Stripe is not configured");
+      return;
+    }
+
     try {
       setLoadingStripe(true);
       const order = await createOrder("stripe");
@@ -547,6 +555,7 @@ const Checkout = () => {
             disabled={
               !selectedAddressId ||
               !pricing.meetsMinimumOrder ||
+              !stripePublishableKey ||
               loadingStripe ||
               creatingOrder
             }
