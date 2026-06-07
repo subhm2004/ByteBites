@@ -2,6 +2,7 @@ import { AuthenticatedRequest } from "../middlewares/isAuth.js";
 import TryCatch from "../middlewares/trycatch.js";
 import { couponEngine } from "../coupon/CouponEngine.js";
 import { CouponError } from "../coupon/errors/CouponError.js";
+import { calculateOrderPricing } from "../pricing/orderPricing.js";
 
 export const validateCoupon = TryCatch(
   async (req: AuthenticatedRequest, res) => {
@@ -10,7 +11,7 @@ export const validateCoupon = TryCatch(
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const { code, subtotal } = req.body;
+    const { code, subtotal, distanceKm } = req.body;
 
     if (!code || subtotal == null) {
       return res.status(400).json({
@@ -24,10 +25,11 @@ export const validateCoupon = TryCatch(
         userId: user._id.toString(),
       });
 
-      const deliveryFee = Number(subtotal) < 250 ? 49 : 0;
-      const platformFee = 7;
-      const totalAmount =
-        Number(subtotal) - result.discountAmount + deliveryFee + platformFee;
+      const pricing = calculateOrderPricing({
+        subtotal: Number(subtotal),
+        distanceKm: distanceKm != null ? Number(distanceKm) : undefined,
+        discountAmount: result.discountAmount,
+      });
 
       return res.json({
         valid: true,
@@ -35,9 +37,10 @@ export const validateCoupon = TryCatch(
         couponCode: result.couponCode,
         couponType: result.couponType,
         description: result.description,
-        deliveryFee,
-        platformFee,
-        totalAmount,
+        deliveryFee: pricing.deliveryFee,
+        platformFee: pricing.platformFee,
+        smallOrderFee: pricing.smallOrderFee,
+        totalAmount: pricing.grandTotal,
       });
     } catch (error) {
       if (error instanceof CouponError) {

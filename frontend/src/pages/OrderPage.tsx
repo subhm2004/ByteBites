@@ -1,11 +1,14 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useSocket } from "../context/useSocket";
+import { useAppData } from "../context/useAppData";
 import { useEffect, useState } from "react";
 import type { IOrder } from "../types";
 import axios from "axios";
 import { restaurantService } from "../main";
+import toast from "react-hot-toast";
 import UserOrderMap from "../components/UserOrderMap";
 import {
+  AppButton,
   AppCard,
   AppPage,
   LoadingScreen,
@@ -14,12 +17,22 @@ import {
 } from "../components/ui/AppUI";
 import DownloadReceiptButton from "../components/DownloadReceiptButton";
 import ReviewModal from "../components/ReviewModal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 import { MdDeliveryDining } from "react-icons/md";
-import { BiTime } from "react-icons/bi";
+import { BiLoader, BiRefresh, BiTime } from "react-icons/bi";
 import { getDistanceKm, getOrderETA } from "../utils/eta";
+import {
+  canCustomerCancel,
+  canReorder,
+  cancelCustomerOrder,
+  handleOrderActionError,
+  reorderOrder,
+} from "../utils/orderActions";
 
 const OrderPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { fetchCart } = useAppData();
   const { socket } = useSocket();
 
   const [order, setOrder] = useState<IOrder | null>(null);
@@ -27,6 +40,9 @@ const OrderPage = () => {
   const [hasRestaurantReview, setHasRestaurantReview] = useState(false);
   const [hasRiderReview, setHasRiderReview] = useState(false);
   const [showReview, setShowReview] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [reordering, setReordering] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const needsReview = (current: IOrder | null) => {
     if (!current || current.status !== "delivered") return false;
@@ -157,8 +173,51 @@ const OrderPage = () => {
 
   const orderEta = getOrderETA(order, riderToCustomerKm);
 
+  const handleCancel = async () => {
+    if (!order) return;
+
+    setCancelling(true);
+    try {
+      const data = await cancelCustomerOrder(order._id);
+      toast.success(data.message);
+      setShowCancelConfirm(false);
+      await fetchOrder();
+    } catch (error) {
+      handleOrderActionError(error, "Failed to cancel order");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleReorder = async () => {
+    if (!order) return;
+
+    setReordering(true);
+    try {
+      const data = await reorderOrder(order._id);
+      await fetchCart();
+      toast.success(data.message);
+      navigate("/cart");
+    } catch (error) {
+      handleOrderActionError(error, "Failed to reorder");
+    } finally {
+      setReordering(false);
+    }
+  };
+
   return (
     <AppPage narrow>
+      <ConfirmModal
+        open={showCancelConfirm}
+        title="Cancel this order?"
+        message="Your order will be cancelled immediately and the restaurant will be notified."
+        detail="Refund will be processed to your original payment method within 5–7 business days."
+        confirmLabel="Yes, cancel"
+        cancelLabel="Keep order"
+        loading={cancelling}
+        onClose={() => !cancelling && setShowCancelConfirm(false)}
+        onConfirm={handleCancel}
+      />
       {showReview && order && (
         <ReviewModal
           order={order}
@@ -280,6 +339,40 @@ const OrderPage = () => {
             variant="primary"
             label="Download receipt (PDF)"
           />
+        )}
+
+        {canCustomerCancel(order) && (
+          <AppButton
+            variant="danger"
+            disabled={cancelling}
+            onClick={() => setShowCancelConfirm(true)}
+          >
+            Cancel order
+          </AppButton>
+        )}
+
+        {canCustomerCancel(order) && (
+          <p className="text-center text-xs text-gray-500 dark:text-gray-400">
+            Free cancellation before the restaurant starts preparing your food
+          </p>
+        )}
+
+        {order.status === "cancelled" && (
+          <p className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-center text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+            This order was cancelled. Refund will reflect within 5–7 business
+            days.
+          </p>
+        )}
+
+        {canReorder(order) && (
+          <AppButton disabled={reordering} onClick={handleReorder}>
+            {reordering ? (
+              <BiLoader className="animate-spin" />
+            ) : (
+              <BiRefresh />
+            )}
+            Reorder same items
+          </AppButton>
         )}
 
         {order.status === "delivered" && needsReview(order) && (

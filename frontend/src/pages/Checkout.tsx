@@ -7,6 +7,10 @@ import type { ICart, IMenuItem, IRestaurant } from "../types";
 import toast from "react-hot-toast";
 import { BiCreditCard, BiLoader, BiMapPin, BiTag, BiTime } from "react-icons/bi";
 import { getDistanceKm, formatETAShort, estimateETA } from "../utils/eta";
+import {
+  calculateOrderPricing,
+  MIN_ORDER_AMOUNT,
+} from "../utils/orderPricing";
 import { loadStripe } from "@stripe/stripe-js";
 import type { RazorpaySuccessResponse } from "../types/razorpay";
 import {
@@ -31,9 +35,6 @@ interface AppliedCoupon {
   couponCode: string;
   discountAmount: number;
   description: string;
-  deliveryFee: number;
-  platformFee: number;
-  totalAmount: number;
 }
 
 const Checkout = () => {
@@ -83,18 +84,22 @@ const Checkout = () => {
 
   const restaurant = (cart?.[0]?.restaurantId as IRestaurant | undefined) ?? null;
 
-  const deliveryEta = useMemo(() => {
-    if (!selectedAddressId || !restaurant?.autoLocation?.coordinates) return null;
+  const deliveryDistanceKm = useMemo(() => {
+    if (!selectedAddressId || !restaurant?.autoLocation?.coordinates) return undefined;
 
     const selected = addresses.find((a) => a._id === selectedAddressId);
     const coords = selected?.location?.coordinates;
-    if (!coords) return null;
+    if (!coords) return undefined;
 
     const [delLng, delLat] = coords;
     const [resLng, resLat] = restaurant.autoLocation.coordinates;
-    const distanceKm = getDistanceKm(delLat, delLng, resLat, resLng);
-    return estimateETA(distanceKm);
+    return getDistanceKm(delLat, delLng, resLat, resLng);
   }, [selectedAddressId, addresses, restaurant]);
+
+  const deliveryEta = useMemo(() => {
+    if (deliveryDistanceKm == null) return null;
+    return estimateETA(deliveryDistanceKm);
+  }, [deliveryDistanceKm]);
 
   if (!cart || cart.length === 0 || !restaurant) {
     return (
@@ -112,12 +117,12 @@ const Checkout = () => {
     );
   }
 
-  const deliveryFee = appliedCoupon?.deliveryFee ?? (subTotal < 250 ? 49 : 0);
-  const platformFee = appliedCoupon?.platformFee ?? 7;
   const discountAmount = appliedCoupon?.discountAmount ?? 0;
-  const grandTotal =
-    appliedCoupon?.totalAmount ??
-    subTotal + deliveryFee + platformFee;
+  const pricing = calculateOrderPricing({
+    subtotal: subTotal,
+    distanceKm: deliveryDistanceKm,
+    discountAmount,
+  });
 
   const applyCoupon = async () => {
     if (!couponInput.trim()) {
@@ -129,7 +134,11 @@ const Checkout = () => {
     try {
       const { data } = await axios.post(
         `${restaurantService}/api/coupon/validate`,
-        { code: couponInput.trim(), subtotal: subTotal },
+        {
+          code: couponInput.trim(),
+          subtotal: subTotal,
+          distanceKm: deliveryDistanceKm,
+        },
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -141,9 +150,6 @@ const Checkout = () => {
         couponCode: data.couponCode,
         discountAmount: data.discountAmount,
         description: data.description,
-        deliveryFee: data.deliveryFee,
-        platformFee: data.platformFee,
-        totalAmount: data.totalAmount,
       });
       toast.success(data.description || "Coupon applied!");
     } catch (error) {
@@ -446,21 +452,36 @@ const Checkout = () => {
               </span>
             </div>
             <div className="flex justify-between text-gray-600 dark:text-gray-400">
-              <span>Delivery</span>
+              <span>
+                Delivery
+                {deliveryDistanceKm != null && (
+                  <span className="ml-1 text-[11px] text-gray-400">
+                    ({deliveryDistanceKm.toFixed(1)} km)
+                  </span>
+                )}
+              </span>
               <span
                 className={
-                  deliveryFee === 0
+                  pricing.isFreeDelivery
                     ? "font-semibold text-emerald-600 dark:text-emerald-400"
                     : "font-medium text-gray-900 dark:text-gray-100"
                 }
               >
-                {deliveryFee === 0 ? "Free" : `₹${deliveryFee}`}
+                {pricing.isFreeDelivery ? "Free" : `₹${pricing.deliveryFee}`}
               </span>
             </div>
+            {pricing.smallOrderFee > 0 && (
+              <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                <span>Small order fee</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  ₹{pricing.smallOrderFee}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between text-gray-600 dark:text-gray-400">
               <span>Platform fee</span>
               <span className="font-medium text-gray-900 dark:text-gray-100">
-                ₹{platformFee}
+                ₹{pricing.platformFee}
               </span>
             </div>
             {discountAmount > 0 && (
@@ -471,9 +492,22 @@ const Checkout = () => {
             )}
           </div>
 
+          {!pricing.meetsMinimumOrder && (
+            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
+              Minimum order is ₹{MIN_ORDER_AMOUNT}. Add ₹{pricing.amountToMinimum}{" "}
+              more to continue.
+            </p>
+          )}
+
+          {pricing.meetsMinimumOrder && pricing.amountToFreeDelivery > 0 && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+              Add ₹{pricing.amountToFreeDelivery} more for free delivery 🎉
+            </p>
+          )}
+
           <div className="flex justify-between border-t border-gray-100 pt-3 text-lg font-black dark:border-gray-800">
             <span className="text-gray-900 dark:text-white">To pay</span>
-            <span className="text-[#E23744]">₹{grandTotal}</span>
+            <span className="text-[#E23744]">₹{pricing.grandTotal}</span>
           </div>
         </AppCard>
 
@@ -484,9 +518,19 @@ const Checkout = () => {
               Select a delivery address to enable payment
             </p>
           )}
+          {!pricing.meetsMinimumOrder && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-800 dark:bg-red-950/40 dark:text-red-300">
+              Cart total must be at least ₹{MIN_ORDER_AMOUNT} to place an order
+            </p>
+          )}
 
           <AppButton
-            disabled={!selectedAddressId || loadingRazorpay || creatingOrder}
+            disabled={
+              !selectedAddressId ||
+              !pricing.meetsMinimumOrder ||
+              loadingRazorpay ||
+              creatingOrder
+            }
             onClick={payWithRazorpay}
             className="!bg-[#E23744]"
           >
@@ -500,7 +544,12 @@ const Checkout = () => {
 
           <AppButton
             variant="dark"
-            disabled={!selectedAddressId || loadingStripe || creatingOrder}
+            disabled={
+              !selectedAddressId ||
+              !pricing.meetsMinimumOrder ||
+              loadingStripe ||
+              creatingOrder
+            }
             onClick={payWithStripe}
           >
             {loadingStripe ? (

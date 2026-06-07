@@ -2,9 +2,18 @@ import { useEffect, useState } from "react";
 import type { IOrder } from "../types";
 import { useNavigate } from "react-router-dom";
 import { useSocket } from "../context/useSocket";
+import { useAppData } from "../context/useAppData";
 import axios from "axios";
 import { restaurantService } from "../main";
-import { BiChevronRight } from "react-icons/bi";
+import { BiChevronRight, BiLoader, BiRefresh, BiX } from "react-icons/bi";
+import toast from "react-hot-toast";
+import {
+  canCustomerCancel,
+  canReorder,
+  cancelCustomerOrder,
+  handleOrderActionError,
+  reorderOrder,
+} from "../utils/orderActions";
 import {
   AppCard,
   AppPage,
@@ -15,6 +24,7 @@ import {
 } from "../components/ui/AppUI";
 import DownloadReceiptButton from "../components/DownloadReceiptButton";
 import ReviewModal from "../components/ReviewModal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 
 const ACTIVE_STATUSES = [
   "placed",
@@ -35,8 +45,11 @@ const Orders = () => {
     new Set()
   );
   const [reviewOrder, setReviewOrder] = useState<IOrder | null>(null);
+  const [actionOrderId, setActionOrderId] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<IOrder | null>(null);
   const navigate = useNavigate();
   const { socket } = useSocket();
+  const { fetchCart } = useAppData();
 
   const orderNeedsReview = (order: IOrder) => {
     if (order.status !== "delivered") return false;
@@ -99,6 +112,34 @@ const Orders = () => {
     };
   }, [socket]);
 
+  const handleCancel = async (order: IOrder) => {
+    setActionOrderId(order._id);
+    try {
+      const data = await cancelCustomerOrder(order._id);
+      toast.success(data.message);
+      setCancelTarget(null);
+      await fetchOrders();
+    } catch (error) {
+      handleOrderActionError(error, "Failed to cancel order");
+    } finally {
+      setActionOrderId(null);
+    }
+  };
+
+  const handleReorder = async (order: IOrder) => {
+    setActionOrderId(order._id);
+    try {
+      const data = await reorderOrder(order._id);
+      await fetchCart();
+      toast.success(data.message);
+      navigate("/cart");
+    } catch (error) {
+      handleOrderActionError(error, "Failed to reorder");
+    } finally {
+      setActionOrderId(null);
+    }
+  };
+
   if (loading) {
     return <LoadingScreen message="Loading your orders..." />;
   }
@@ -123,6 +164,17 @@ const Orders = () => {
 
   return (
     <AppPage narrow>
+      <ConfirmModal
+        open={Boolean(cancelTarget)}
+        title="Cancel this order?"
+        message="Your order will be cancelled immediately and the restaurant will be notified."
+        detail="Refund will be processed to your original payment method within 5–7 business days."
+        confirmLabel="Yes, cancel"
+        cancelLabel="Keep order"
+        loading={Boolean(cancelTarget && actionOrderId === cancelTarget._id)}
+        onClose={() => !actionOrderId && setCancelTarget(null)}
+        onConfirm={() => cancelTarget && handleCancel(cancelTarget)}
+      />
       {reviewOrder && (
         <ReviewModal
           order={reviewOrder}
@@ -152,6 +204,9 @@ const Orders = () => {
                 key={order._id}
                 order={order}
                 onClick={() => navigate(`/order/${order._id}`)}
+                canCancel={canCustomerCancel(order)}
+                onCancel={() => setCancelTarget(order)}
+                isActionLoading={actionOrderId === order._id}
               />
             ))
           )}
@@ -172,6 +227,9 @@ const Orders = () => {
                 onClick={() => navigate(`/order/${order._id}`)}
                 canReview={orderNeedsReview(order)}
                 onReview={() => setReviewOrder(order)}
+                canReorder={canReorder(order)}
+                onReorder={() => handleReorder(order)}
+                isActionLoading={actionOrderId === order._id}
               />
             ))
           )}
@@ -188,11 +246,21 @@ const OrderRow = ({
   onClick,
   canReview = false,
   onReview,
+  canCancel = false,
+  onCancel,
+  canReorder = false,
+  onReorder,
+  isActionLoading = false,
 }: {
   order: IOrder;
   onClick: () => void;
   canReview?: boolean;
   onReview?: () => void;
+  canCancel?: boolean;
+  onCancel?: () => void;
+  canReorder?: boolean;
+  onReorder?: () => void;
+  isActionLoading?: boolean;
 }) => (
   <AppCard
     hover
@@ -220,7 +288,43 @@ const OrderRow = ({
       <span className="text-lg font-black text-[#E23744]">
         ₹{order.totalAmount}
       </span>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {canCancel && onCancel && (
+          <button
+            type="button"
+            disabled={isActionLoading}
+            onClick={(e) => {
+              e.stopPropagation();
+              onCancel();
+            }}
+            className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-50 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-400"
+          >
+            {isActionLoading ? (
+              <BiLoader className="animate-spin" />
+            ) : (
+              <BiX />
+            )}
+            Cancel
+          </button>
+        )}
+        {canReorder && onReorder && (
+          <button
+            type="button"
+            disabled={isActionLoading}
+            onClick={(e) => {
+              e.stopPropagation();
+              onReorder();
+            }}
+            className="inline-flex items-center gap-1 rounded-lg border border-[#E23744]/20 bg-red-50 px-3 py-1.5 text-xs font-semibold text-[#E23744] hover:bg-red-100 disabled:opacity-50 dark:border-[#E23744]/30 dark:bg-red-950/40 dark:text-[#ff6b7a]"
+          >
+            {isActionLoading ? (
+              <BiLoader className="animate-spin" />
+            ) : (
+              <BiRefresh />
+            )}
+            Reorder
+          </button>
+        )}
         {canReview && onReview && (
           <button
             type="button"

@@ -2,6 +2,7 @@ import express from "express";
 import { isAuth, isSeller } from "../middlewares/isAuth.js";
 import {
   assignRiderToOrder,
+  cancelOrderByCustomer,
   createOrder,
   fetchOrderForPayment,
   fetchRestaurantOrders,
@@ -11,6 +12,7 @@ import {
   getOrderDispatchStatus,
   getRestaurantSalesAnalytics,
   getRiderEarningsAnalytics,
+  reorderFromOrder,
   updateOrderStatus,
   updateOrderStatusRider,
 } from "../controllers/order.js";
@@ -18,6 +20,8 @@ import {
 const router = express.Router();
 
 router.get("/myorder", isAuth, getMyOrders);
+router.put("/:orderId/cancel", isAuth, cancelOrderByCustomer);
+router.post("/:orderId/reorder", isAuth, reorderFromOrder);
 router.get(
   "/analytics/:restaurantId",
   isAuth,

@@ -15,6 +15,10 @@ import {
   EmptyState,
   PageHeader,
 } from "../components/ui/AppUI";
+import {
+  calculateOrderPricing,
+  MIN_ORDER_AMOUNT,
+} from "../utils/orderPricing";
 
 const Cart = () => {
   const { cart, subTotal, quauntity, fetchCart } = useAppData();
@@ -43,9 +47,7 @@ const Cart = () => {
 
   const restaurant = cart[0].restaurantId as IRestaurant;
 
-  const deliveryFee = subTotal < 250 ? 49 : 0;
-  const platfromFee = 7;
-  const grandTotal = subTotal + deliveryFee + platfromFee;
+  const pricing = calculateOrderPricing({ subtotal: subTotal });
 
   const increaseQty = async (itemId: string) => {
     try {
@@ -176,43 +178,75 @@ const Cart = () => {
                 ₹{subTotal}
               </span>
             </div>
-            <div className="flex justify-between text-gray-600 dark:text-gray-400">
-              <span>Delivery fee</span>
-              <span
-                className={
-                  deliveryFee === 0
-                    ? "font-semibold text-emerald-600 dark:text-emerald-400"
-                    : "font-medium text-gray-900 dark:text-gray-100"
-                }
-              >
-                {deliveryFee === 0 ? "FREE" : `₹${deliveryFee}`}
-              </span>
-            </div>
-            <div className="flex justify-between text-gray-600 dark:text-gray-400">
-              <span>Platform fee</span>
-              <span className="font-medium text-gray-900 dark:text-gray-100">
-                ₹{platfromFee}
-              </span>
-            </div>
+            {pricing.meetsMinimumOrder && (
+              <>
+                <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                  <span>Delivery fee</span>
+                  <span
+                    className={
+                      pricing.isFreeDelivery
+                        ? "font-semibold text-emerald-600 dark:text-emerald-400"
+                        : "font-medium text-gray-900 dark:text-gray-100"
+                    }
+                  >
+                    {pricing.isFreeDelivery ? "FREE" : `₹${pricing.deliveryFee}`}
+                  </span>
+                </div>
+                {pricing.smallOrderFee > 0 && (
+                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                    <span>Small order fee</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                      ₹{pricing.smallOrderFee}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                  <span>Platform fee</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    ₹{pricing.platformFee}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
-          {subTotal < 250 && (
+          {!pricing.meetsMinimumOrder && (
+            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs leading-relaxed text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
+              Minimum order is ₹{MIN_ORDER_AMOUNT}. Add ₹{pricing.amountToMinimum}{" "}
+              more to place your order.
+            </p>
+          )}
+
+          {pricing.meetsMinimumOrder && pricing.amountToFreeDelivery > 0 && (
             <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-              Add ₹{250 - subTotal} more for free delivery 🎉
+              Add ₹{pricing.amountToFreeDelivery} more for free delivery 🎉
+            </p>
+          )}
+
+          {pricing.meetsMinimumOrder && (
+            <p className="text-[11px] leading-relaxed text-gray-400 dark:text-gray-500">
+              Final delivery fee is calculated at checkout based on your address
+              distance.
             </p>
           )}
 
           <div className="flex justify-between border-t border-gray-100 pt-3 text-lg font-black dark:border-gray-800">
             <span className="text-gray-900 dark:text-white">Total</span>
-            <span className="text-[#E23744]">₹{grandTotal}</span>
+            <span className="text-[#E23744]">
+              ₹{pricing.meetsMinimumOrder ? pricing.grandTotal : subTotal}
+            </span>
           </div>
 
           <AppButton
             onClick={() => navigate("/checkout")}
-            disabled={!restaurant.isOpen}
+            disabled={!restaurant.isOpen || !pricing.meetsMinimumOrder}
             className="mt-2"
           >
-            {!restaurant.isOpen ? "Restaurant is closed" : "Proceed to checkout"}
+            {!restaurant.isOpen
+              ? "Restaurant is closed"
+              : !pricing.meetsMinimumOrder
+                ? `Minimum order ₹${MIN_ORDER_AMOUNT}`
+                : "Proceed to checkout"}
           </AppButton>
 
           <AppButton

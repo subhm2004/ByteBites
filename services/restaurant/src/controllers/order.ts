@@ -3,12 +3,17 @@ import { AuthenticatedRequest } from "../middlewares/isAuth.js";
 import TryCatch from "../middlewares/trycatch.js";
 import Address from "../models/Address.js";
 import Cart from "../models/Cart.js";
+import MenuItem from "../models/MenuItems.js";
 import { IMenuItem } from "../models/MenuItems.js";
 import Order from "../models/Order.js";
 import Restaurant, { IRestaurant } from "../models/Restaurant.js";
 import { publishEvent } from "../config/order.publisher.js";
 import { couponEngine } from "../coupon/CouponEngine.js";
 import { CouponError } from "../coupon/errors/CouponError.js";
+import {
+  calculateOrderPricing,
+  MIN_ORDER_AMOUNT,
+} from "../pricing/orderPricing.js";
 
 export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
   const user = req.user;
@@ -118,8 +123,11 @@ export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
     };
   });
 
-  const deliveryFee = subtotal < 250 ? 49 : 0;
-  const platfromFee = 7;
+  if (subtotal < MIN_ORDER_AMOUNT) {
+    return res.status(400).json({
+      message: `Minimum order amount is ₹${MIN_ORDER_AMOUNT}. Add more items to continue.`,
+    });
+  }
 
   let discountAmount = 0;
   let appliedCouponCode: string | null = null;
@@ -142,7 +150,15 @@ export const createOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
     }
   }
 
-  const totalAmount = subtotal - discountAmount + deliveryFee + platfromFee;
+  const pricing = calculateOrderPricing({
+    subtotal,
+    distanceKm: distance,
+    discountAmount,
+  });
+
+  const deliveryFee = pricing.deliveryFee;
+  const platfromFee = pricing.platformFee + pricing.smallOrderFee;
+  const totalAmount = pricing.grandTotal;
 
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
@@ -364,6 +380,164 @@ const SELLER_STATUS_TRANSITIONS: Record<string, string[]> = {
   preparing: ["ready_for_rider", "cancelled"],
   ready_for_rider: ["ready_for_rider"],
 };
+
+const CUSTOMER_CANCELLABLE_STATUSES = ["placed", "accepted"];
+
+const emitOrderUpdate = async (
+  order: { _id: unknown; userId: string; restaurantId: string },
+  status: string
+) => {
+  const payload = { orderId: order._id, status };
+  const headers = { "x-internal-key": process.env.INTERNAL_SERVICE_KEY! };
+
+  await Promise.all([
+    axios.post(
+      `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
+      { event: "order:update", room: `user:${order.userId}`, payload },
+      { headers }
+    ),
+    axios.post(
+      `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
+      {
+        event: "order:update",
+        room: `restaurant:${order.restaurantId}`,
+        payload,
+      },
+      { headers }
+    ),
+  ]);
+};
+
+export const cancelOrderByCustomer = TryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { orderId } = req.params;
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    if (order.userId !== user._id.toString()) {
+      return res.status(403).json({ message: "You cannot cancel this order" });
+    }
+
+    if (order.paymentStatus !== "paid") {
+      return res.status(400).json({ message: "Order cannot be cancelled" });
+    }
+
+    if (!CUSTOMER_CANCELLABLE_STATUSES.includes(order.status)) {
+      return res.status(400).json({
+        message:
+          "Order can only be cancelled before the restaurant starts preparing your food",
+      });
+    }
+
+    order.status = "cancelled";
+    await order.save();
+
+    await emitOrderUpdate(order, "cancelled");
+
+    res.json({
+      message:
+        "Order cancelled. Refund will be processed within 5–7 business days.",
+      order,
+    });
+  }
+);
+
+export const reorderFromOrder = TryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const order = await Order.findById(req.params.orderId);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    if (order.userId !== user._id.toString()) {
+      return res.status(403).json({ message: "You cannot reorder this order" });
+    }
+
+    if (order.paymentStatus !== "paid") {
+      return res.status(400).json({ message: "Invalid order" });
+    }
+
+    if (!["delivered", "cancelled"].includes(order.status)) {
+      return res.status(400).json({
+        message: "Reorder is available only for completed orders",
+      });
+    }
+
+    const restaurant = await Restaurant.findById(order.restaurantId);
+
+    if (!restaurant) {
+      return res.status(404).json({ message: "Restaurant no longer available" });
+    }
+
+    if (!restaurant.isOpen) {
+      return res.status(400).json({
+        message: "Restaurant is currently closed. Try again later.",
+      });
+    }
+
+    const unavailable: string[] = [];
+    const validItems: { itemId: string; quantity: number }[] = [];
+
+    for (const item of order.items) {
+      const menuItem = await MenuItem.findById(item.itemId);
+
+      if (!menuItem || !menuItem.isAvailable) {
+        unavailable.push(item.name);
+        continue;
+      }
+
+      validItems.push({ itemId: item.itemId, quantity: item.quauntity });
+    }
+
+    if (validItems.length === 0) {
+      return res.status(400).json({
+        message: "None of the items from this order are available anymore",
+        unavailable,
+      });
+    }
+
+    await Cart.deleteMany({ userId: user._id });
+
+    for (const { itemId, quantity } of validItems) {
+      await Cart.findOneAndUpdate(
+        { userId: user._id, restaurantId: order.restaurantId, itemId },
+        {
+          $set: {
+            userId: user._id,
+            restaurantId: order.restaurantId,
+            itemId,
+            quauntity: quantity,
+          },
+        },
+        { upsert: true, new: true }
+      );
+    }
+
+    res.json({
+      message:
+        unavailable.length > 0
+          ? `Added ${validItems.length} item(s). Unavailable: ${unavailable.join(", ")}`
+          : "Items added to your cart",
+      unavailable,
+      restaurantId: order.restaurantId,
+      itemCount: validItems.length,
+    });
+  }
+);
 
 export const updateOrderStatus = TryCatch(
   async (req: AuthenticatedRequest, res) => {

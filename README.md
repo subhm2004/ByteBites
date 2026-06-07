@@ -46,7 +46,7 @@
 
 ## 📖 About
 
-**ByteBites** is a full-stack food delivery web application built with a **microservices architecture**. It connects **customers**, **restaurant partners (sellers)**, **delivery riders**, and **platform admins** in one ecosystem — similar to Zomato or Swiggy.
+**ByteBites** is a full-stack food delivery web application built with a **microservices architecture**. It connects **customers**, **restaurant partners (sellers)**, **delivery riders**, and **platform admins** in one ecosystem.
 
 Unlike a typical college monolith, this project uses:
 
@@ -89,67 +89,67 @@ Unlike a typical college monolith, this project uses:
 
 ### 👤 Customer
 
-| Feature | Description |
-|---------|-------------|
-| Google OAuth login | JWT session (15 days) via Auth service |
-| Role selection | Customer / Seller / Rider on first login |
-| Landing page | Marketing site at `/` — hero, iPhone mockup, FAQ, testimonials |
-| Explore nearby restaurants | `$geoNear` query within ~5 km radius |
-| Search & category filter | Search by name; category chips filter name/description |
-| **Dynamic ETA on cards** | Delivery time calculated from distance (not hardcoded) |
-| Restaurant page | Menu, ratings badge, customer reviews section |
-| Cart | Single-restaurant cart enforced; qty +/- |
-| Saved addresses | Leaflet map picker + Nominatim geocoding |
-| Checkout | Address select, **coupon apply**, fee breakdown, **ETA preview** |
-| Dual payments | Razorpay (INR/UPI) + Stripe (international) |
-| Order history | All paid orders with status badges |
-| Live order tracking | Leaflet map + OSRM route + rider GPS dot |
-| **Status-aware ETA** | Countdown updates as order progresses |
-| Post-delivery reviews | Rate restaurant + delivery partner (stars + comment) |
-| PDF receipt download | jsPDF receipt for paid orders |
-| Dark / light theme | Theme toggle across app |
-| Ban enforcement | Suspended users blocked at login |
+| Feature                    | Description                                                      |
+| -------------------------- | ---------------------------------------------------------------- |
+| Google OAuth login         | JWT session (15 days) via Auth service                           |
+| Role selection             | Customer / Seller / Rider on first login                         |
+| Landing page               | Marketing site at `/` — hero, iPhone mockup, FAQ, testimonials   |
+| Explore nearby restaurants | `$geoNear` query within ~5 km radius                             |
+| Search & category filter   | Search by name; category chips filter name/description           |
+| **Dynamic ETA on cards**   | Delivery time calculated from distance (not hardcoded)           |
+| Restaurant page            | Menu, ratings badge, customer reviews section                    |
+| Cart                       | Single-restaurant cart enforced; qty +/-                         |
+| Saved addresses            | Leaflet map picker + Nominatim geocoding                         |
+| Checkout                   | Address select, **coupon apply**, fee breakdown, **ETA preview** |
+| Dual payments              | Razorpay (INR/UPI) + Stripe (international)                      |
+| Order history              | All paid orders with status badges                               |
+| Live order tracking        | Leaflet map + OSRM route + rider GPS dot                         |
+| **Status-aware ETA**       | Countdown updates as order progresses                            |
+| Post-delivery reviews      | Rate restaurant + delivery partner (stars + comment)             |
+| PDF receipt download       | jsPDF receipt for paid orders                                    |
+| Dark / light theme         | Theme toggle across app                                          |
+| Ban enforcement            | Suspended users blocked at login                                 |
 
 ### 🏪 Restaurant (Seller)
 
-| Feature | Description |
-|---------|-------------|
-| Restaurant onboarding | Name, description, image (Cloudinary), geo location |
-| Open / close toggle | Control visibility to customers |
-| Edit profile | Update name & description |
-| Menu management | **Add, edit, delete** items with image upload |
-| Item availability toggle | Mark items available/unavailable |
-| Live incoming orders | Socket `order:new` + sound alert (quack.mp3) |
-| Order workflow | `placed → accepted → preparing → ready_for_rider` |
-| **Seller cancel order** | Cancel from `placed`, `accepted`, `preparing` |
+| Feature                   | Description                                                  |
+| ------------------------- | ------------------------------------------------------------ |
+| Restaurant onboarding     | Name, description, image (Cloudinary), geo location          |
+| Open / close toggle       | Control visibility to customers                              |
+| Edit profile              | Update name & description                                    |
+| Menu management           | **Add, edit, delete** items with image upload                |
+| Item availability toggle  | Mark items available/unavailable                             |
+| Live incoming orders      | Socket `order:new` + sound alert (quack.mp3)                 |
+| Order workflow            | `placed → accepted → preparing → ready_for_rider`            |
+| **Seller cancel order**   | Cancel from `placed`, `accepted`, `preparing`                |
 | Sales analytics dashboard | Revenue, daily chart (Recharts), top items, status breakdown |
-| Real-time order updates | Socket events on status changes |
+| Real-time order updates   | Socket events on status changes                              |
 
 ### 🛵 Delivery Rider
 
-| Feature | Description |
-|---------|-------------|
-| Profile registration | Photo, phone, Aadhar, driving license, GPS |
-| Admin verification gate | Must be verified before going online |
-| Online / offline toggle | Live GPS update on toggle |
+| Feature                       | Description                                   |
+| ----------------------------- | --------------------------------------------- |
+| Profile registration          | Photo, phone, Aadhar, driving license, GPS    |
+| Admin verification gate       | Must be verified before going online          |
+| Online / offline toggle       | Live GPS update on toggle                     |
 | **Smart sequential dispatch** | Nearest rider offered first (10s window each) |
-| Incoming order alerts | Socket + sound (faaah.mp3) |
-| Accept & deliver | Map with OSRM routing |
-| Live GPS broadcast | Customer sees rider on map in real time |
-| Status updates | `picked_up → delivered` |
-| **Earnings dashboard** | Today / week / all-time + 7-day chart |
-| **Trip history** | Past deliveries with route map snapshots |
-| Rider rating display | Avg stars from customer reviews |
+| Incoming order alerts         | Socket + sound (faaah.mp3)                    |
+| Accept & deliver              | Map with OSRM routing                         |
+| Live GPS broadcast            | Customer sees rider on map in real time       |
+| Status updates                | `picked_up → delivered`                       |
+| **Earnings dashboard**        | Today / week / all-time + 7-day chart         |
+| **Trip history**              | Past deliveries with route map snapshots      |
+| Rider rating display          | Avg stars from customer reviews               |
 
 ### 🛡️ Admin
 
-| Feature | Description |
-|---------|-------------|
-| **Users tab** | List users, ban/unban (cannot ban self) |
-| **Restaurants tab** | Verify pending restaurant partners |
-| **Riders tab** | Verify pending delivery riders |
-| **Coupons tab** | Full coupon CRUD — create, edit, toggle, delete |
-| Direct MongoDB access | No inter-service HTTP — fast admin ops |
+| Feature               | Description                                     |
+| --------------------- | ----------------------------------------------- |
+| **Users tab**         | List users, ban/unban (cannot ban self)         |
+| **Restaurants tab**   | Verify pending restaurant partners              |
+| **Riders tab**        | Verify pending delivery riders                  |
+| **Coupons tab**       | Full coupon CRUD — create, edit, toggle, delete |
+| Direct MongoDB access | No inter-service HTTP — fast admin ops          |
 
 ---
 
@@ -200,17 +200,17 @@ flowchart TB
 
 ### Design Principles Used
 
-| Principle | Where |
-|-----------|-------|
-| **Microservices** | 6 independent services, each owns a domain |
-| **Async messaging** | Payment confirmation decoupled via RabbitMQ |
-| **Event-driven** | Socket.IO pushes live updates to clients |
-| **Geospatial queries** | MongoDB `2dsphere` for restaurants, riders, addresses |
-| **Internal service auth** | `x-internal-key` header for service-to-service calls |
-| **Strategy pattern** | Pluggable discount algorithms in coupon engine |
-| **Facade pattern** | Single `CouponEngine.apply()` entry point |
-| **Repository pattern** | Data access abstracted in `CouponRepository` |
-| **TTL index** | Unpaid orders auto-expire after 15 minutes |
+| Principle                 | Where                                                 |
+| ------------------------- | ----------------------------------------------------- |
+| **Microservices**         | 6 independent services, each owns a domain            |
+| **Async messaging**       | Payment confirmation decoupled via RabbitMQ           |
+| **Event-driven**          | Socket.IO pushes live updates to clients              |
+| **Geospatial queries**    | MongoDB `2dsphere` for restaurants, riders, addresses |
+| **Internal service auth** | `x-internal-key` header for service-to-service calls  |
+| **Strategy pattern**      | Pluggable discount algorithms in coupon engine        |
+| **Facade pattern**        | Single `CouponEngine.apply()` entry point             |
+| **Repository pattern**    | Data access abstracted in `CouponRepository`          |
+| **TTL index**             | Unpaid orders auto-expire after 15 minutes            |
 
 ### Service Communication
 
@@ -246,15 +246,15 @@ Admin Service
 
 ## 🔧 Microservices Breakdown
 
-| Port | Service | Responsibility |
-|------|---------|----------------|
-| **5173** | Frontend | React SPA — all role UIs, maps, charts |
-| **5007** | Auth | Google OAuth, JWT, roles, ban check |
+| Port     | Service    | Responsibility                                               |
+| -------- | ---------- | ------------------------------------------------------------ |
+| **5173** | Frontend   | React SPA — all role UIs, maps, charts                       |
+| **5007** | Auth       | Google OAuth, JWT, roles, ban check                          |
 | **5001** | Restaurant | Restaurants, menu, cart, orders, addresses, coupons, reviews |
-| **5002** | Utils | Cloudinary upload, Razorpay + Stripe, payment events |
-| **5004** | Realtime | Socket.IO server + internal HTTP emit API |
-| **5005** | Rider | Profiles, availability, dispatch consumer, earnings |
-| **5006** | Admin | User management, verification, coupon CRUD |
+| **5002** | Utils      | Cloudinary upload, Razorpay + Stripe, payment events         |
+| **5004** | Realtime   | Socket.IO server + internal HTTP emit API                    |
+| **5005** | Rider      | Profiles, availability, dispatch consumer, earnings          |
+| **5006** | Admin      | User management, verification, coupon CRUD                   |
 
 **Shared database:** `Zomato_Clone` on MongoDB Atlas (all services except Admin use Mongoose; Admin uses native driver).
 
@@ -323,20 +323,20 @@ classDiagram
 
 ### Design Patterns
 
-| Pattern | Implementation | Purpose |
-|---------|---------------|---------|
-| **Facade** | `CouponEngine` | Single `apply()` method hides complexity of repo + validation + strategy |
-| **Strategy** | `DiscountStrategy` interface | Swap discount algorithm without changing engine code |
-| **Factory** | `DiscountStrategyFactory` | Returns correct strategy by `coupon.type` |
-| **Repository** | `CouponRepository` | Abstracts MongoDB queries for coupons |
-| **Validator (Chain)** | `CouponValidator` | Sequential eligibility checks with early throw |
-| **Custom Error** | `CouponError` | Typed errors with HTTP status codes |
+| Pattern               | Implementation               | Purpose                                                                  |
+| --------------------- | ---------------------------- | ------------------------------------------------------------------------ |
+| **Facade**            | `CouponEngine`               | Single `apply()` method hides complexity of repo + validation + strategy |
+| **Strategy**          | `DiscountStrategy` interface | Swap discount algorithm without changing engine code                     |
+| **Factory**           | `DiscountStrategyFactory`    | Returns correct strategy by `coupon.type`                                |
+| **Repository**        | `CouponRepository`           | Abstracts MongoDB queries for coupons                                    |
+| **Validator (Chain)** | `CouponValidator`            | Sequential eligibility checks with early throw                           |
+| **Custom Error**      | `CouponError`                | Typed errors with HTTP status codes                                      |
 
 ### Coupon Types
 
-| Type | Algorithm | Example |
-|------|-----------|---------|
-| `flat` | `min(value, subtotal)` | `FLAT50` → ₹50 off |
+| Type          | Algorithm                                          | Example                      |
+| ------------- | -------------------------------------------------- | ---------------------------- |
+| `flat`        | `min(value, subtotal)`                             | `FLAT50` → ₹50 off           |
 | `percent_cap` | `(subtotal × value / 100)` capped by `maxDiscount` | `SAVE20` → 20% off, max ₹100 |
 
 ### Validation Rules
@@ -408,52 +408,55 @@ Display range = [total − 5, total + 5] clamped to [20, 60] min
 
 ### Constants
 
-| Constant | Value | Reason |
-|----------|-------|--------|
-| `AVG_RIDER_SPEED_KMH` | 22 | City traffic average |
-| `BASE_PREP_MINUTES` | 15 | Kitchen prep time |
-| `ETA_BUFFER_MINUTES` | 5 | Safety margin |
-| `MIN_ETA_MINUTES` | 20 | Never show too low |
-| `MAX_ETA_MINUTES` | 60 | Cap for far orders |
+| Constant              | Value | Reason               |
+| --------------------- | ----- | -------------------- |
+| `AVG_RIDER_SPEED_KMH` | 22    | City traffic average |
+| `BASE_PREP_MINUTES`   | 15    | Kitchen prep time    |
+| `ETA_BUFFER_MINUTES`  | 5     | Safety margin        |
+| `MIN_ETA_MINUTES`     | 20    | Never show too low   |
+| `MAX_ETA_MINUTES`     | 60    | Cap for far orders   |
 
 ### Where ETA Appears
 
-| Screen | Logic |
-|--------|-------|
-| **Explore cards** | `estimateETA(distanceKm)` from user → restaurant Haversine |
-| **Restaurant page** | Blue ETA badge next to ratings |
-| **Checkout** | Updates when delivery address selected |
-| **Order tracking** | `getOrderETA()` — status-aware countdown |
+| Screen              | Logic                                                      |
+| ------------------- | ---------------------------------------------------------- |
+| **Explore cards**   | `estimateETA(distanceKm)` from user → restaurant Haversine |
+| **Restaurant page** | Blue ETA badge next to ratings                             |
+| **Checkout**        | Updates when delivery address selected                     |
+| **Order tracking**  | `getOrderETA()` — status-aware countdown                   |
 
 ### Status-Aware ETA (Live Tracking)
 
-| Order Status | ETA Logic |
-|--------------|-----------|
-| `placed` / `accepted` | Full estimated range |
-| `preparing` | ~70% of midpoint remaining |
-| `ready_for_rider` | Travel time + 8 min (rider assigning) |
-| `rider_assigned` | Travel time + 6 min |
-| `picked_up` | Live Haversine rider → customer (if GPS available) |
-| `delivered` | "Delivered" |
-| `cancelled` | "Order cancelled" |
+| Order Status          | ETA Logic                                          |
+| --------------------- | -------------------------------------------------- |
+| `placed` / `accepted` | Full estimated range                               |
+| `preparing`           | ~70% of midpoint remaining                         |
+| `ready_for_rider`     | Travel time + 8 min (rider assigning)              |
+| `rider_assigned`      | Travel time + 6 min                                |
+| `picked_up`           | Live Haversine rider → customer (if GPS available) |
+| `delivered`           | "Delivered"                                        |
+| `cancelled`           | "Order cancelled"                                  |
 
 ---
 
 ## ⭐ Reviews & Ratings
 
 ### Restaurant Reviews
+
 - Customer rates 1–5 stars + optional comment after delivery
 - Stored in `reviews` collection (one per order)
 - Restaurant `avgRating` and `reviewCount` auto-recalculated via MongoDB aggregation
 - Displayed on restaurant page and explore cards
 
 ### Rider Reviews
+
 - Customer rates delivery partner separately (if rider assigned)
 - Stored in `riderreviews` collection
 - Rider `avgRating` synced to Rider service via internal API
 - Displayed on rider dashboard profile
 
 ### API Endpoints
+
 ```
 POST   /api/review                          — submit review(s)
 GET    /api/review/my                       — user's past reviews
@@ -498,16 +501,17 @@ sequenceDiagram
 **Connection:** Frontend connects to Realtime service with JWT in `handshake.auth.token`.
 
 **Auto-join rooms on connect:**
+
 - `user:{userId}` — all users
 - `restaurant:{restaurantId}` — sellers (if JWT contains restaurantId)
 
-| Event | Emitted By | Room | Frontend Listener |
-|-------|-----------|------|-------------------|
-| `order:new` | Restaurant (payment success) | `restaurant:{id}` | Seller orders panel |
-| `order:update` | Restaurant (status change) | `user:{customerId}` | Orders, OrderPage |
+| Event                  | Emitted By                       | Room                                   | Frontend Listener         |
+| ---------------------- | -------------------------------- | -------------------------------------- | ------------------------- |
+| `order:new`            | Restaurant (payment success)     | `restaurant:{id}`                      | Seller orders panel       |
+| `order:update`         | Restaurant (status change)       | `user:{customerId}`                    | Orders, OrderPage         |
 | `order:rider_assigned` | Restaurant (rider assign/status) | `user:{customerId}`, `restaurant:{id}` | Orders, OrderPage, Seller |
-| `order:available` | Rider dispatch consumer | `user:{riderUserId}` | RiderDashboard |
-| `rider:location` | Rider frontend → internal emit | `user:{customerUserId}` | OrderPage map |
+| `order:available`      | Rider dispatch consumer          | `user:{riderUserId}`                   | RiderDashboard            |
+| `rider:location`       | Rider frontend → internal emit   | `user:{customerUserId}`                | OrderPage map             |
 
 **Internal emit API:** `POST /api/v1/internal/emit` with `x-internal-key` header.
 
@@ -515,15 +519,16 @@ sequenceDiagram
 
 ## 🐰 RabbitMQ Message Flows
 
-| Queue | Env Variable | Publisher | Consumer | Event | Effect |
-|-------|-------------|-----------|----------|-------|--------|
-| `payment_event` | `PAYMENT_QUEUE` | Utils | Restaurant | `PAYMENT_SUCCESS` | Mark paid, increment coupon, notify seller |
-| `order_ready_queue` | `ORDER_READY_QUEUE` | Restaurant | Rider | `ORDER_READY_FOR_RIDER` | Sequential rider dispatch |
-| `rider_queue` | `RIDER_QUEUE` | — | — | — | Reserved (asserted, unused) |
+| Queue               | Env Variable        | Publisher  | Consumer   | Event                   | Effect                                     |
+| ------------------- | ------------------- | ---------- | ---------- | ----------------------- | ------------------------------------------ |
+| `payment_event`     | `PAYMENT_QUEUE`     | Utils      | Restaurant | `PAYMENT_SUCCESS`       | Mark paid, increment coupon, notify seller |
+| `order_ready_queue` | `ORDER_READY_QUEUE` | Restaurant | Rider      | `ORDER_READY_FOR_RIDER` | Sequential rider dispatch                  |
+| `rider_queue`       | `RIDER_QUEUE`       | —          | —          | —                       | Reserved (asserted, unused)                |
 
 ### Why RabbitMQ for Payments?
 
 Payment gateway callbacks are async and can retry. Publishing to a queue ensures:
+
 - Payment service responds fast to the gateway
 - Restaurant service processes confirmation at its own pace
 - Failed processing can be retried without losing the payment event
@@ -558,29 +563,29 @@ Access: Set `role: "admin"` manually in MongoDB `users` collection.
 
 ### Tabs
 
-| Tab | Features |
-|-----|----------|
-| **Users** | List up to 100 users, ban/unban, shows `(You)` for logged-in admin, self-ban blocked |
-| **Restaurants** | Pending verification list, one-click verify |
-| **Riders** | Pending verification list, one-click verify |
-| **Coupons** | Create, list, toggle active/inactive, delete |
+| Tab             | Features                                                                             |
+| --------------- | ------------------------------------------------------------------------------------ |
+| **Users**       | List up to 100 users, ban/unban, shows `(You)` for logged-in admin, self-ban blocked |
+| **Restaurants** | Pending verification list, one-click verify                                          |
+| **Riders**      | Pending verification list, one-click verify                                          |
+| **Coupons**     | Create, list, toggle active/inactive, delete                                         |
 
 ### Coupon Management (Admin Panel)
 
 Admin can create coupons with:
 
-| Field | Description |
-|-------|-------------|
-| `code` | Unique coupon code (e.g. `SAVE20`) |
-| `type` | `flat` or `percent_cap` |
-| `value` | ₹ amount (flat) or percentage (percent_cap) |
-| `maxDiscount` | Cap for percentage coupons |
-| `minOrderAmount` | Minimum cart value required |
-| `usageLimit` | Global max uses (optional) |
-| `perUserLimit` | Max uses per customer |
-| `expiresAt` | Expiry date |
-| `description` | Display text |
-| `isActive` | Toggle on/off without deleting |
+| Field            | Description                                 |
+| ---------------- | ------------------------------------------- |
+| `code`           | Unique coupon code (e.g. `SAVE20`)          |
+| `type`           | `flat` or `percent_cap`                     |
+| `value`          | ₹ amount (flat) or percentage (percent_cap) |
+| `maxDiscount`    | Cap for percentage coupons                  |
+| `minOrderAmount` | Minimum cart value required                 |
+| `usageLimit`     | Global max uses (optional)                  |
+| `perUserLimit`   | Max uses per customer                       |
+| `expiresAt`      | Expiry date                                 |
+| `description`    | Display text                                |
+| `isActive`       | Toggle on/off without deleting              |
 
 Admin writes directly to MongoDB `coupons` collection — the Restaurant service's `CouponEngine` reads from the same collection at apply time.
 
@@ -588,18 +593,18 @@ Admin writes directly to MongoDB `coupons` collection — the Restaurant service
 
 ## 🗄 Database Collections
 
-| Collection | Service | Key Fields |
-|------------|---------|------------|
-| `users` | Auth, Admin | name, email, role, isBanned |
-| `restaurants` | Restaurant | name, ownerId, autoLocation (2dsphere), isOpen, isVerified, avgRating |
-| `menuitems` | Restaurant | restaurantId, name, price, image, isAvailable |
-| `carts` | Restaurant | userId, restaurantId, itemId, quauntity |
-| `addresses` | Restaurant | userId, formattedAddress, location (2dsphere) |
-| `orders` | Restaurant | items, fees, coupon, status, payment, rider, distance, expiresAt |
-| `riders` | Rider | userId, documents, location (2dsphere), isVerified, avgRating |
-| `reviews` | Restaurant | userId, restaurantId, orderId (unique), rating |
-| `riderreviews` | Restaurant | userId, riderId, orderId (unique), rating |
-| `coupons` | Restaurant, Admin | code, type, value, limits, expiresAt, isActive |
+| Collection     | Service           | Key Fields                                                            |
+| -------------- | ----------------- | --------------------------------------------------------------------- |
+| `users`        | Auth, Admin       | name, email, role, isBanned                                           |
+| `restaurants`  | Restaurant        | name, ownerId, autoLocation (2dsphere), isOpen, isVerified, avgRating |
+| `menuitems`    | Restaurant        | restaurantId, name, price, image, isAvailable                         |
+| `carts`        | Restaurant        | userId, restaurantId, itemId, quauntity                               |
+| `addresses`    | Restaurant        | userId, formattedAddress, location (2dsphere)                         |
+| `orders`       | Restaurant        | items, fees, coupon, status, payment, rider, distance, expiresAt      |
+| `riders`       | Rider             | userId, documents, location (2dsphere), isVerified, avgRating         |
+| `reviews`      | Restaurant        | userId, restaurantId, orderId (unique), rating                        |
+| `riderreviews` | Restaurant        | userId, riderId, orderId (unique), rating                             |
+| `coupons`      | Restaurant, Admin | code, type, value, limits, expiresAt, isActive                        |
 
 ---
 
@@ -607,25 +612,26 @@ Admin writes directly to MongoDB `coupons` collection — the Restaurant service
 
 ### Auth — `:5007/api/auth`
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/login` | — | Google OAuth login |
-| PUT | `/add/role` | JWT | Assign role (customer/seller/rider) |
-| GET | `/me` | JWT | Current user profile |
+| Method | Path        | Auth | Description                         |
+| ------ | ----------- | ---- | ----------------------------------- |
+| POST   | `/login`    | —    | Google OAuth login                  |
+| PUT    | `/add/role` | JWT  | Assign role (customer/seller/rider) |
+| GET    | `/me`       | JWT  | Current user profile                |
 
 ### Restaurant — `:5001`
 
-| Prefix | Key Routes |
-|--------|-----------|
-| `/api/restaurant` | POST `/new`, GET `/my`, GET `/all`, PUT `/status`, PUT `/edit`, GET `/:id` |
-| `/api/item` | POST `/new`, GET `/all/:id`, PUT `/:itemId`, DELETE `/:itemId`, PUT `/status/:itemId` |
-| `/api/cart` | POST `/add`, GET `/all`, PUT `/inc`, PUT `/dec`, DELETE `/clear` |
-| `/api/address` | POST `/new`, GET `/all`, DELETE `/:id` |
-| `/api/order` | POST `/new`, GET `/myorder`, GET `/:id`, PUT `/:orderId`, GET `/analytics/:restaurantId` |
-| `/api/coupon` | POST `/validate` |
-| `/api/review` | POST `/`, GET `/my`, GET `/restaurant/:id`, GET `/rider/:id` |
+| Prefix            | Key Routes                                                                               |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| `/api/restaurant` | POST `/new`, GET `/my`, GET `/all`, PUT `/status`, PUT `/edit`, GET `/:id`               |
+| `/api/item`       | POST `/new`, GET `/all/:id`, PUT `/:itemId`, DELETE `/:itemId`, PUT `/status/:itemId`    |
+| `/api/cart`       | POST `/add`, GET `/all`, PUT `/inc`, PUT `/dec`, DELETE `/clear`                         |
+| `/api/address`    | POST `/new`, GET `/all`, DELETE `/:id`                                                   |
+| `/api/order`      | POST `/new`, GET `/myorder`, GET `/:id`, PUT `/:orderId`, GET `/analytics/:restaurantId` |
+| `/api/coupon`     | POST `/validate`                                                                         |
+| `/api/review`     | POST `/`, GET `/my`, GET `/restaurant/:id`, GET `/rider/:id`                             |
 
 **Internal routes** (require `x-internal-key`):
+
 - `GET /api/order/payment/:id`
 - `PUT /api/order/assign/rider`
 - `GET /api/order/current/rider`
@@ -635,61 +641,64 @@ Admin writes directly to MongoDB `coupons` collection — the Restaurant service
 
 ### Utils — `:5002`
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/upload` | Cloudinary image upload |
-| POST | `/api/payment/create` | Create Razorpay order |
-| POST | `/api/payment/verify` | Verify Razorpay payment |
-| POST | `/api/payment/stripe/create` | Create Stripe session |
-| POST | `/api/payment/stripe/verify` | Verify Stripe payment |
+| Method | Path                         | Description             |
+| ------ | ---------------------------- | ----------------------- |
+| POST   | `/api/upload`                | Cloudinary image upload |
+| POST   | `/api/payment/create`        | Create Razorpay order   |
+| POST   | `/api/payment/verify`        | Verify Razorpay payment |
+| POST   | `/api/payment/stripe/create` | Create Stripe session   |
+| POST   | `/api/payment/stripe/verify` | Verify Stripe payment   |
 
 ### Realtime — `:5004`
 
-| Type | Path | Description |
-|------|------|-------------|
-| WebSocket | Socket.IO | JWT-authenticated connection |
-| POST | `/api/v1/internal/emit` | Internal event broadcast |
+| Type      | Path                    | Description                  |
+| --------- | ----------------------- | ---------------------------- |
+| WebSocket | Socket.IO               | JWT-authenticated connection |
+| POST      | `/api/v1/internal/emit` | Internal event broadcast     |
 
 ### Rider — `:5005/api/rider`
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/new` | Register rider profile |
-| GET | `/myprofile` | Get rider profile |
-| GET | `/earnings` | Earnings + trip history |
-| PATCH | `/toggle` | Online/offline + GPS |
-| POST | `/accept/:orderId` | Accept delivery |
-| GET | `/order/current` | Active delivery |
-| PUT | `/order/update/:orderId` | Update delivery status |
-| PATCH | `/internal/rating` | Sync rating (internal) |
+| Method | Path                     | Description             |
+| ------ | ------------------------ | ----------------------- |
+| POST   | `/new`                   | Register rider profile  |
+| GET    | `/myprofile`             | Get rider profile       |
+| GET    | `/earnings`              | Earnings + trip history |
+| PATCH  | `/toggle`                | Online/offline + GPS    |
+| POST   | `/accept/:orderId`       | Accept delivery         |
+| GET    | `/order/current`         | Active delivery         |
+| PUT    | `/order/update/:orderId` | Update delivery status  |
+| PATCH  | `/internal/rating`       | Sync rating (internal)  |
 
 ### Admin — `:5006/api/v1`
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/admin/users` | List users |
-| PATCH | `/admin/users/:id/status` | Ban/unban user |
-| GET | `/admin/restaurant/pending` | Pending restaurants |
-| PATCH | `/verify/restaurant/:id` | Verify restaurant |
-| GET | `/admin/rider/pending` | Pending riders |
-| PATCH | `/verify/rider/:id` | Verify rider |
-| GET | `/admin/coupons` | List all coupons |
-| POST | `/admin/coupon` | Create coupon |
-| PATCH | `/admin/coupon/:id` | Update coupon |
-| PATCH | `/admin/coupon/:id/toggle` | Toggle active |
-| DELETE | `/admin/coupon/:id` | Delete coupon |
+| Method | Path                        | Description         |
+| ------ | --------------------------- | ------------------- |
+| GET    | `/admin/users`              | List users          |
+| PATCH  | `/admin/users/:id/status`   | Ban/unban user      |
+| GET    | `/admin/restaurant/pending` | Pending restaurants |
+| PATCH  | `/verify/restaurant/:id`    | Verify restaurant   |
+| GET    | `/admin/rider/pending`      | Pending riders      |
+| PATCH  | `/verify/rider/:id`         | Verify rider        |
+| GET    | `/admin/coupons`            | List all coupons    |
+| POST   | `/admin/coupon`             | Create coupon       |
+| PATCH  | `/admin/coupon/:id`         | Update coupon       |
+| PATCH  | `/admin/coupon/:id/toggle`  | Toggle active       |
+| DELETE | `/admin/coupon/:id`         | Delete coupon       |
 
 ---
 
 ## 🛠 Tech Stack
 
 ### Frontend
+
 React 19 · TypeScript · Vite 7 · Tailwind CSS 4 · React Router 7 · Axios · Socket.IO Client · Leaflet + OSRM · Recharts · jsPDF · react-hot-toast · Google OAuth · Stripe.js
 
 ### Backend (each service)
+
 Node.js · Express 5 · TypeScript · Mongoose 9 · amqplib · jsonwebtoken · multer · axios
 
 ### Infrastructure
+
 MongoDB Atlas · RabbitMQ (CloudAMQP or Docker) · Cloudinary · Razorpay · Stripe · Google OAuth · OpenStreetMap · Nominatim · OSRM
 
 ---
@@ -799,10 +808,7 @@ cd frontend && npm run dev              # :5173
 In MongoDB Atlas shell or Compass:
 
 ```javascript
-db.users.updateOne(
-  { email: "your@gmail.com" },
-  { $set: { role: "admin" } }
-)
+db.users.updateOne({ email: "your@gmail.com" }, { $set: { role: "admin" } });
 ```
 
 ### 6. Open App
@@ -816,9 +822,9 @@ db.users.updateOne(
 
 ### Shared (must match across services)
 
-| Variable | Used By |
-|----------|---------|
-| `JWT_SEC` | auth, restaurant, rider, realtime, admin |
+| Variable               | Used By                                                                      |
+| ---------------------- | ---------------------------------------------------------------------------- |
+| `JWT_SEC`              | auth, restaurant, rider, realtime, admin                                     |
 | `INTERNAL_SERVICE_KEY` | restaurant, utils, realtime, rider + `VITE_INTERNAL_SERVICE_KEY` in frontend |
 
 <details>
@@ -929,10 +935,10 @@ VITE_INTERNAL_SERVICE_KEY=your-internal-service-key
 
 ## 📚 Additional Docs
 
-| File | Purpose |
-|------|---------|
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | 12 Mermaid diagrams — system, payment, order, socket flows |
-| [VIVA_DOCUMENTATION.md](./VIVA_DOCUMENTATION.md) | Interview / viva prep — Q&A, formulas, talking points |
+| File                                             | Purpose                                                    |
+| ------------------------------------------------ | ---------------------------------------------------------- |
+| [ARCHITECTURE.md](./ARCHITECTURE.md)             | 12 Mermaid diagrams — system, payment, order, socket flows |
+| [VIVA_DOCUMENTATION.md](./VIVA_DOCUMENTATION.md) | Interview / viva prep — Q&A, formulas, talking points      |
 
 ---
 
