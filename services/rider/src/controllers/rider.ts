@@ -206,21 +206,32 @@ export const acceptOrder = TryCatch(async (req: AuthenticatedRequest, res) => {
       }
     );
 
-    if (data.success) {
-      const riderDetails = await Rider.findOneAndUpdate(
-        {
-          userId: riderUserId,
-          isAvailble: true,
-        },
-        { isAvailble: false },
-        { new: true }
-      );
-
-      res.json({ message: "Order accepted" });
+    if (!data.success) {
+      return res.status(409).json({
+        message: data.message || "Order already taken",
+        success: false,
+      });
     }
-  } catch (error) {
-    res.status(400).json({
-      message: "Order already taken",
+
+    await Rider.findOneAndUpdate(
+      {
+        userId: riderUserId,
+        isAvailble: true,
+      },
+      { isAvailble: false },
+      { new: true }
+    );
+
+    return res.json({ message: "Order accepted", success: true });
+  } catch (error: unknown) {
+    const message =
+      axios.isAxiosError(error) && error.response?.data?.message
+        ? String(error.response.data.message)
+        : "Order already taken";
+
+    return res.status(409).json({
+      message,
+      success: false,
     });
   }
 });
@@ -257,10 +268,17 @@ export const fetchMyCurrentOrder = TryCatch(
       res.json({
         order: data,
       });
-    } catch (error: any) {
-      res.status(500).json({
-        message: error.response.data.message,
-      });
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        return res.json({ order: null });
+      }
+
+      const message =
+        axios.isAxiosError(error) && error.response?.data?.message
+          ? String(error.response.data.message)
+          : "Failed to fetch current order";
+
+      res.status(500).json({ message });
     }
   }
 );

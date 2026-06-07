@@ -399,7 +399,11 @@ const RiderDashboard = () => {
               <RiderOrderRequest
                 key={id}
                 orderId={id}
+                onDismiss={() => {
+                  setIncomingOrders((prev) => prev.filter((oid) => oid !== id));
+                }}
                 onAccepted={() => {
+                  setIncomingOrders((prev) => prev.filter((oid) => oid !== id));
                   fetchProfile();
                   fetchCurrentOrder();
                 }}

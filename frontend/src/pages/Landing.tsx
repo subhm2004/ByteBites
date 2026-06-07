@@ -779,7 +779,7 @@ const Landing = () => {
                 {[
                   { Icon: FaInstagram, href: "#", label: "Instagram" },
                   { Icon: FaTwitter, href: "#", label: "Twitter" },
-                  { Icon: FaGithub, href: "#", label: "GitHub" },
+                  { Icon: FaGithub, href: "https://github.com/subhm2004/ByteBites", label: "GitHub" },
                 ].map(({ Icon, href, label }) => (
                   <a
                     key={label}

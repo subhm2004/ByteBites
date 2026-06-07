@@ -3,6 +3,7 @@ import { getChannel } from "./rabbitmq.js";
 import { Rider } from "../model/Rider.js";
 
 const DISPATCH_OFFER_MS = 10_000;
+const DISPATCH_RADIUS_M = Number(process.env.RIDER_DISPATCH_RADIUS_M || 5000);
 const dispatchTimeouts = new Map<string, NodeJS.Timeout>();
 
 const restaurantBase = () =>
@@ -37,7 +38,7 @@ const notifyRider = async (
     `${process.env.REALTIME_SERVICE}/api/v1/internal/emit`,
     {
       event: "order:available",
-      room: `user:${riderUserId}`,
+      room: `user:${String(riderUserId)}`,
       payload: { orderId, restaurantId },
     },
     { headers: internalHeaders() }
@@ -111,14 +112,30 @@ export const startOrderReadyConsumer = async () => {
 
       const { orderId, restaurantId, location } = event.data;
 
+      if (
+        !orderId ||
+        !restaurantId ||
+        !location?.coordinates ||
+        location.coordinates.length !== 2
+      ) {
+        console.log("Invalid ORDER_READY_FOR_RIDER payload:", event.data);
+        channel.ack(msg);
+        return;
+      }
+
       clearDispatch(orderId);
+
+      const nearPoint = {
+        type: "Point" as const,
+        coordinates: location.coordinates as [number, number],
+      };
 
       const riders = await Rider.aggregate([
         {
           $geoNear: {
-            near: location,
+            near: nearPoint,
             distanceField: "distance",
-            maxDistance: 500,
+            maxDistance: DISPATCH_RADIUS_M,
             spherical: true,
             query: { isAvailble: true, isVerified: true },
           },
@@ -127,9 +144,14 @@ export const startOrderReadyConsumer = async () => {
         { $project: { userId: 1, distance: 1 } },
       ]);
 
-      console.log(`Found ${riders.length} nearby riders for order ${orderId}`);
+      console.log(
+        `Found ${riders.length} nearby riders for order ${orderId} (within ${DISPATCH_RADIUS_M}m)`
+      );
 
       if (riders.length === 0) {
+        console.log(
+          `No riders within ${DISPATCH_RADIUS_M}m for order ${orderId}. Ensure a verified rider is online near the restaurant.`
+        );
         channel.ack(msg);
         return;
       }

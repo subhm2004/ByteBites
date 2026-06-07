@@ -42,7 +42,7 @@ export const initSocket = (server: http.Server) => {
       return;
     }
 
-    const userId = user._id;
+    const userId = String(user._id);
 
     socket.join(`user:${userId}`);
 

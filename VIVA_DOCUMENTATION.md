@@ -5,14 +5,16 @@
 
 | Field | Detail |
 |-------|--------|
-| **Project Title** | ByteBites — Production-Ready Food Delivery Platform |
+| **Project Title** | ByteBites — Production-Grade Food Delivery Platform |
 | **Project Type** | Full-Stack Microservices Web Application |
-| **Domain** | Food Tech (Zomato / Swiggy Clone) |
+| **Domain** | Food Tech — Multi-Sided Delivery Marketplace |
 | **Architecture** | 6 Backend Microservices + React SPA Frontend |
 | **Database** | MongoDB Atlas (Cloud) |
-| **Message Broker** | RabbitMQ (CloudAMQP / AWS Docker) |
-| **Reference Tutorial** | [Small Town Coder — Zomato Clone (25+ hrs)](https://www.youtube.com/watch?v=79F36yYEDyo) |
-| **Related Docs** | `ARCHITECTURE.md` (technical diagrams) |
+| **Message Broker** | RabbitMQ (Self-hosted on AWS EC2 via Docker) |
+| **Deployment** | Frontend → Vercel · Backend → Render · RabbitMQ → AWS EC2 |
+| **Repository** | [github.com/subhm2004/ByteBites](https://github.com/subhm2004/ByteBites) |
+| **Demo Video** | [Google Drive](https://drive.google.com/file/d/1dFfNB1KGfTNGw0WirO0h5zulQg5hJMcx/view?usp=drive_link) |
+| **Related Docs** | `README.md` · `ARCHITECTURE.md` (technical diagrams) |
 
 ---
 
@@ -87,7 +89,7 @@
 
 ## 1. Abstract
 
-**ByteBites** is a full-stack, production-style **food delivery web application** modeled after industry platforms such as **Zomato** and **Swiggy**. Unlike typical college projects that use a single monolithic backend, this system implements a **microservices architecture** with **six independent Node.js/Express services**, each deployed on its own port and responsible for a distinct business domain.
+**ByteBites** is a full-stack, production-grade **food delivery web application** built as an independent product — not a tutorial clone. Unlike typical college projects that use a single monolithic backend, this system implements a **microservices architecture** with **six independent Node.js/Express services**, each deployed on its own port and responsible for a distinct business domain.
 
 The platform supports **four distinct user personas** — Customer, Restaurant Seller, Delivery Partner (Rider), and Platform Admin — each with a dedicated user interface and API access pattern. Core capabilities include **Google OAuth authentication**, **JWT-based authorization**, **geospatial restaurant discovery**, **shopping cart and checkout**, **dual payment gateway integration** (Razorpay for India, Stripe for international), **asynchronous event processing** via **RabbitMQ message queues**, and **real-time bidirectional communication** using **Socket.IO** with **Leaflet map-based live tracking**.
 
@@ -104,7 +106,7 @@ Food delivery is a **multi-sided marketplace** connecting three parties:
 - **Restaurants** who prepare food
 - **Delivery partners** who transport food
 
-Platforms like Zomato process thousands of orders per minute. Their systems must handle:
+Platforms like modern food delivery apps process thousands of orders per minute. Their systems must handle:
 - Concurrent user sessions (millions)
 - Payment processing (PCI compliance)
 - Real-time GPS tracking
@@ -115,7 +117,7 @@ Building such a system as a learning project teaches **system design**, not just
 
 ### 2.2 What This Project Is
 
-This project is a **functional prototype** of that industry model, built following the comprehensive tutorial by **Small Town Coder** (YouTube, 25+ hours). It is branded as **ByteBites** throughout the UI and documentation.
+**ByteBites** is a standalone food delivery platform — designed, engineered, and deployed end-to-end with its own branding, pricing logic, dispatch algorithm, coupon engine, admin tooling, and cloud infrastructure.
 
 ### 2.3 What Makes This Project "Advanced" for Viva
 
@@ -126,10 +128,13 @@ This project is a **functional prototype** of that industry model, built followi
 | Auth | Email/password | Google OAuth + JWT |
 | Payments | Mock/fake | Razorpay + Stripe (real SDKs) |
 | Real-time | Polling/refresh | Socket.IO push events |
-| Maps | None | Leaflet geolocation + routing |
+| Maps | None | Leaflet geolocation + OSRM routing |
 | Images | Local upload | Cloudinary CDN |
 | Database | Local MongoDB | MongoDB Atlas cloud |
 | Roles | Single user type | 4 role-based dashboards |
+| Coupons | Hardcoded discount | Strategy + Factory + Facade engine |
+| Analytics | None | Seller sales + Admin GMV dashboards |
+| Rate limiting | None | express-rate-limit on auth/orders |
 
 ---
 
@@ -168,7 +173,11 @@ This project is a **functional prototype** of that industry model, built followi
 | 11 | Live map tracking | Leaflet + OpenStreetMap + routing |
 | 12 | Admin moderation | Verify restaurants and riders |
 | 13 | Dual payment support | Razorpay (INR) + Stripe (global) |
-| 14 | Cloud deployment readiness | Env-based config, Vercel + Render |
+| 14 | Coupon & discount engine | Strategy + Factory + Facade (OOP) |
+| 15 | Reviews & ratings | Post-delivery customer feedback |
+| 16 | Seller analytics | Revenue, orders, top items |
+| 17 | Admin GMV dashboard | Platform-wide revenue metrics |
+| 18 | Cloud deployment | Vercel + Render + AWS EC2 RabbitMQ |
 
 ### 4.2 Learning Outcomes
 
@@ -192,7 +201,12 @@ After completing this project, a student can explain:
 - Customer: browse, search, cart, address, checkout, pay, track
 - Seller: restaurant CRUD, menu CRUD, open/close toggle, live orders, status updates, sound notification on new order
 - Rider: profile registration, online/offline toggle, GPS location, order accept, map navigation, status updates
-- Admin: pending list, one-click verify
+- Admin: pending list, one-click verify, coupon CRUD, GMV analytics
+- Customer: order cancel (before preparing), reorder from history
+- Coupon validation at checkout (percentage, flat, free delivery)
+- Post-delivery reviews for restaurant and rider
+- Seller sales analytics dashboard
+- Rate limiting on auth and order endpoints
 - Razorpay and Stripe test-mode payments
 - RabbitMQ async messaging
 - Socket.IO real-time events
@@ -203,13 +217,12 @@ After completing this project, a student can explain:
 
 - Native Android/iOS apps
 - Email/SMS/push notifications (FCM)
-- Coupon/discount engine (not in current codebase)
-- Rating and reviews
 - Multi-restaurant single cart
 - Wallet / cash on delivery
 - Automated CI/CD pipeline
 - Kubernetes orchestration
 - Unit/integration test suite
+- Production-grade secrets management (Vault, etc.)
 
 ---
 
@@ -258,7 +271,7 @@ Customer App ──► Microservices Backend ──► MongoDB
 | npm | 9+ | Package manager |
 | VS Code / Cursor | Latest | IDE |
 | MongoDB Atlas account | Free M0 | Cloud database |
-| CloudAMQP account | Free tier | Cloud RabbitMQ |
+| AWS EC2 instance | t2.micro / free tier | RabbitMQ via Docker |
 | Google Cloud Console | Free | OAuth credentials |
 | Cloudinary account | Free | Image hosting |
 | Razorpay account | Test mode | Indian payments |
@@ -271,7 +284,7 @@ When fully running locally, **7 processes** are active:
 
 | Process | Port |
 |---------|------|
-| Auth | 5000 |
+| Auth | 5007 |
 | Restaurant | 5001 |
 | Utils | 5002 |
 | Realtime | 5004 |
@@ -306,7 +319,7 @@ ByteBites/
 │   └── vercel.json              # Vercel deployment config
 │
 └── services/
-    ├── auth/                    # Port 5000 — Login, JWT, roles
+    ├── auth/                    # Port 5007 — Login, JWT, roles
     │   └── src/
     │       ├── controllers/auth.ts
     │       ├── middlewares/isAuth.ts, trycatch.ts
@@ -400,7 +413,7 @@ flowchart TB
     end
 
     subgraph MS["Microservices Layer"]
-        AUTH["Auth :5000"]
+        AUTH["Auth :5007"]
         REST["Restaurant :5001"]
         UTILS["Utils :5002"]
         RT["Realtime :5004"]
@@ -409,7 +422,7 @@ flowchart TB
     end
 
     subgraph Data["Persistence & Messaging"]
-        MONGO[("MongoDB Atlas\nZomato_Clone")]
+        MONGO[("MongoDB Atlas\nDB_NAME env")]
         RMQ{{"RabbitMQ\npayment_event\norder_ready_queue"}}
     end
 
@@ -449,7 +462,7 @@ flowchart TB
 ### 10.3 Port Map
 
 ```
-5000 → Auth       (/api/auth/*)
+5007 → Auth       (/api/auth/*)
 5001 → Restaurant (/api/restaurant/*, /api/item/*, /api/cart/*, /api/address/*, /api/order/*)
 5002 → Utils      (/api/upload, /api/payment/*)
 5004 → Realtime   (WebSocket + /api/v1/internal/emit)
@@ -490,7 +503,7 @@ flowchart TB
 
 | Variable | Example | Purpose |
 |----------|---------|---------|
-| PORT | 5000 | Server port |
+| PORT | 5007 | Server port |
 | MONGO_URI | mongodb+srv://... | Atlas connection string |
 | JWT_SEC | 64-char random string | JWT signing secret |
 | GOOGLE_CLIENT_ID | xxx.apps.googleusercontent.com | Google OAuth |
@@ -506,7 +519,7 @@ flowchart TB
 | UTILS_SERVICE | http://localhost:5002 |
 | REALTIME_SERVICE | http://localhost:5004 |
 | INTERNAL_SERVICE_KEY | Service-to-service auth |
-| RABBITMQ_URL | amqps://... (CloudAMQP) |
+| RABBITMQ_URL | amqp://user:pass@ec2-host:5672 |
 | PAYMENT_QUEUE | payment_event |
 | RIDER_QUEUE | rider_queue (reserved) |
 | ORDER_READY_QUEUE | order_ready_queue |
@@ -552,7 +565,7 @@ flowchart TB
 | PORT=5006 | Server port |
 | MONGO_URI | Database |
 | JWT_SEC | Token verification |
-| DB_NAME | Zomato_Clone |
+| DB_NAME | ByteBites (or legacy Zomato_Clone) |
 
 ### 12.7 Frontend (`frontend/.env`)
 
@@ -571,7 +584,7 @@ flowchart TB
 
 ## 13. Auth Service — Complete Breakdown
 
-**Port:** 5000  
+**Port:** 5007  
 **Entry:** `services/auth/src/index.ts`  
 **Database collection:** `users`
 
@@ -883,7 +896,7 @@ When message `ORDER_READY_FOR_RIDER` received:
 3. For EACH nearby rider → POST Realtime emit `order:available` to `user:{rider.userId}`
 4. Ack message
 
-**Viva point:** `$maxDistance: 500` means **500 meters** radius.
+**Viva point:** `$maxDistance` is set from `RIDER_DISPATCH_RADIUS_M` env (default **5000m** locally).
 
 ### 17.4 Accept Order (`POST /api/rider/accept/:orderId`)
 
@@ -1094,7 +1107,7 @@ erDiagram
 ### 21.2 Service URLs (`main.tsx`)
 
 ```typescript
-export const authService = "http://localhost:5000";
+export const authService = "http://localhost:5007";
 export const restaurantService = "http://localhost:5001";
 export const utilsService = "http://localhost:5002";
 export const realtimeService = "http://localhost:5004";
@@ -1246,7 +1259,7 @@ sequenceDiagram
     actor U as User
     participant FE as Frontend
     participant G as Google
-    participant A as Auth :5000
+    participant A as Auth :5007
     participant DB as MongoDB
 
     U->>FE: Open app
@@ -1518,31 +1531,34 @@ Utils never trusts frontend for amount — always fetches from Restaurant DB via
 
 | Component | Platform | Notes |
 |-----------|----------|-------|
-| Frontend | Vercel | vercel.json configured |
+| Frontend | Vercel | `vercel.json` configured, env vars for service URLs |
 | Auth, Restaurant, Utils, Realtime, Rider, Admin | Render | Each as separate web service |
 | MongoDB | MongoDB Atlas M0 | Free tier |
-| RabbitMQ | CloudAMQP / AWS Docker | Free tier available |
+| RabbitMQ | **AWS EC2** (Docker) | Self-hosted broker — not CloudAMQP |
 | Images | Cloudinary | Free tier |
 | Domain | Optional | Custom domain on Vercel |
 
 **Production checklist:**
-- Replace all localhost URLs in .env with deployed URLs
+- Replace all localhost URLs in `.env` with deployed Render/Vercel URLs
+- Point `RABBITMQ_URL` to AWS EC2 public IP (port 5672, security group open)
 - Set Google OAuth authorized origins to production domain
 - Use Stripe/Razorpay live keys (not test) for real payments
-- Enable MongoDB IP whitelist or 0.0.0.0/0
+- Enable MongoDB IP whitelist or `0.0.0.0/0`
+- Keep `JWT_SEC` and `INTERNAL_SERVICE_KEY` identical across all 6 services + frontend
 
 ---
 
 ## 37. Local Setup Guide (Summary)
 
 1. Install Node.js 20+
-2. Create MongoDB Atlas cluster → get MONGO_URI
-3. Create CloudAMQP instance → get RABBITMQ_URL
+2. Create MongoDB Atlas cluster → get `MONGO_URI`
+3. Start RabbitMQ locally via Docker **or** connect to AWS EC2 instance → get `RABBITMQ_URL`
 4. Setup Google OAuth, Cloudinary, Razorpay, Stripe credentials
-5. Fill all `.env` files (JWT_SEC same everywhere)
-6. `npm install` in each service + frontend
-7. Start services in order: Auth → Utils → Realtime → Restaurant → Rider → Admin → Frontend
-8. Open http://localhost:5173
+5. Fill all `.env` files (`JWT_SEC` and `INTERNAL_SERVICE_KEY` same everywhere)
+6. Auth runs on **port 5007** (not 5000 — macOS AirPlay conflict)
+7. `npm install` in each service + frontend
+8. Start services in order: RabbitMQ → Auth → Utils → Realtime → Restaurant → Rider → Admin → Frontend
+9. Open http://localhost:5173
 
 ---
 
@@ -1550,7 +1566,9 @@ Utils never trusts frontend for amount — always fetches from Restaurant DB via
 
 ---
 
-## 38. Tutorial Video Chapter Mapping
+## 38. Optional Learning Reference (Tutorial Mapping)
+
+> This project was developed independently as **ByteBites**. The table below maps topics to codebase areas if you used external tutorials for learning.
 
 | Video Timestamp | Topic | Project Component |
 |-----------------|-------|-------------------|
@@ -1568,13 +1586,13 @@ Utils never trusts frontend for amount — always fetches from Restaurant DB via
 | 17:39:44 | Rider service | services/rider |
 | (later) | Admin, deployment | admin service, Vercel/Render |
 
-**Video link:** https://www.youtube.com/watch?v=79F36yYEDyo
+**Video link (optional reference):** https://www.youtube.com/watch?v=79F36yYEDyo
 
 ---
 
 ## 39. Complete API Reference
 
-### Auth — :5000
+### Auth — :5007
 
 | Method | Endpoint | Auth | Body/Params |
 |--------|----------|------|-------------|
@@ -1613,6 +1631,12 @@ Utils never trusts frontend for amount — always fetches from Restaurant DB via
 | PUT | /api/order/assign/rider | Internal | Assign rider |
 | GET | /api/order/current/rider | Internal | Rider's active order |
 | PUT | /api/order/update/status/rider | Internal | Rider status update |
+| GET | /api/order/analytics/:restaurantId | Seller | Sales analytics |
+| POST | /api/coupon/validate | JWT | Validate coupon at checkout |
+| POST | /api/review | JWT | Submit post-delivery review |
+| GET | /api/review/my | JWT | My reviews |
+| GET | /api/review/restaurant/:id | JWT | Restaurant reviews |
+| GET | /api/review/rider/:id | JWT | Rider reviews |
 
 ### Utils — :5002
 
@@ -1646,10 +1670,18 @@ Utils never trusts frontend for amount — always fetches from Restaurant DB via
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
+| GET | /api/v1/admin/users | Admin | List users |
+| PATCH | /api/v1/admin/users/:id/status | Admin | Ban / unban |
 | GET | /api/v1/admin/restaurant/pending | Admin | Pending restaurants |
 | GET | /api/v1/admin/rider/pending | Admin | Pending riders |
 | PATCH | /api/v1/verify/restaurant/:id | Admin | Approve restaurant |
 | PATCH | /api/v1/verify/rider/:id | Admin | Approve rider |
+| GET | /api/v1/admin/coupons | Admin | List coupons |
+| POST | /api/v1/admin/coupon | Admin | Create coupon |
+| PATCH | /api/v1/admin/coupon/:id | Admin | Update coupon |
+| PATCH | /api/v1/admin/coupon/:id/toggle | Admin | Toggle active |
+| DELETE | /api/v1/admin/coupon/:id | Admin | Delete coupon |
+| GET | /api/v1/admin/analytics | Admin | Platform GMV metrics |
 
 ---
 
@@ -1682,47 +1714,49 @@ Utils never trusts frontend for amount — always fetches from Restaurant DB via
 
 ---
 
-## 41. Limitations
+## 41. Known Limitations
 
-1. Single restaurant per cart — cannot mix items from two restaurants
-2. No push notifications when app is closed — only Socket.IO (requires open tab)
-3. Rider dispatch is proximity-based only — no load balancing or ETA optimization
-4. Admin role must be set manually in database
-5. No automated test suite
-6. Shared database across services (not true database-per-service isolation)
-7. `rider_queue` declared but unused
-8. No order cancellation flow in UI
-9. No refund handling
-10. Google OAuth only — no email/password fallback
+| Area | Limitation |
+|------|------------|
+| **Database** | All services share one MongoDB Atlas cluster — not fully database-per-service |
+| **Rider dispatch** | Nearest-first sequential dispatch within configurable radius (`RIDER_DISPATCH_RADIUS_M`); no multi-restaurant batching |
+| **Real-time scaling** | Socket.IO runs on a single Realtime instance — no Redis adapter for horizontal socket clustering yet |
+| **Notifications** | In-app socket alerts only — no mobile push notifications (FCM/APNs) |
+| **ETA engine** | Rule-based Haversine model — not live traffic or historical ML predictions |
+| **Refunds** | Customer cancel shows a refund message — no automated Razorpay/Stripe refund pipeline |
+| **Admin access** | Admin role is assigned manually in MongoDB — no self-serve admin signup |
+| **Testing** | No automated end-to-end or integration test suite in CI yet |
+| **Offline rider** | Rider must stay online with GPS active near restaurants to receive dispatch offers |
+| **Unused queue** | `rider_queue` is asserted in RabbitMQ but has no active producer/consumer |
+
+These are intentional trade-offs for a production-style learning build — each has a clear path to improve in a v2.
 
 ---
 
 ## 42. Future Enhancements
 
-1. **Coupon engine** — flat and percentage discounts
-2. **Push notifications** — Firebase Cloud Messaging
-3. **Redis caching** — restaurant listings, session store
-4. **Docker Compose** — one-command local startup
-5. **Kubernetes** — production orchestration
-6. **Rating & reviews** — post-delivery feedback
-7. **Analytics dashboard** — admin order/revenue charts
-8. **Multi-language** — i18n support
-9. **Wallet system** — store credit
-10. **ML-based dispatch** — smart rider assignment by ETA
-11. **Jest/Supertest** — automated API tests
-12. **GitHub Actions CI/CD** — auto deploy on push
+1. **Push notifications** — Firebase Cloud Messaging
+2. **Redis caching** — restaurant listings, session store, Socket.IO adapter
+3. **Docker Compose** — one-command local startup
+4. **Kubernetes** — production orchestration
+5. **Multi-language** — i18n support
+6. **Wallet system** — store credit
+7. **ML-based dispatch** — smart rider assignment by ETA
+8. **Automated refunds** — Razorpay/Stripe refund pipeline
+9. **Jest/Supertest** — automated API tests
+10. **GitHub Actions CI/CD** — auto deploy on push
 
 ---
 
 ## 43. Viva Demo Script (10 minutes)
 
 ### Slide 1 — Introduction (1 min)
-> "Good morning sir/madam. I present **ByteBites**, a Zomato-like food delivery platform built with **6 microservices**, **RabbitMQ**, and **Socket.IO**. It supports customers, restaurant sellers, delivery riders, and admin — each with a dedicated dashboard."
+> "Good morning sir/madam. I present **ByteBites**, a production-grade food delivery platform built with **6 microservices**, **RabbitMQ**, and **Socket.IO**. It supports customers, restaurant sellers, delivery riders, and admin — each with a dedicated dashboard."
 
 ### Slide 2 — Architecture (2 min)
-- Draw or show diagram: Frontend → 6 services → MongoDB + RabbitMQ
+- Draw or show diagram: Frontend → 6 services → MongoDB + RabbitMQ (AWS EC2)
 - Explain WHY microservices: separation, scaling, fault isolation
-- Mention ports: 5000–5006, frontend 5173
+- Mention ports: Auth **5007**, Restaurant 5001, Utils 5002, Realtime 5004, Rider 5005, Admin 5006, frontend 5173
 
 ### Slide 3 — Customer Demo (2 min)
 1. Google login → select Customer role
@@ -1744,7 +1778,8 @@ Utils never trusts frontend for amount — always fetches from Restaurant DB via
 ### Slide 6 — Technical Highlights (1 min)
 - RabbitMQ: "Payment is async — Utils publishes, Restaurant consumes"
 - Socket.IO: "No page refresh — server pushes events"
-- MongoDB $near: "Finds riders within 500 meters"
+- MongoDB $geoNear: "Finds riders within configurable radius (`RIDER_DISPATCH_RADIUS_M`)"
+- Coupon engine: "Strategy + Factory + Facade pattern for discounts"
 - JWT + internal key: "Secure multi-service communication"
 
 ---
@@ -1754,7 +1789,7 @@ Utils never trusts frontend for amount — always fetches from Restaurant DB via
 ### Examiner ke saamne kaise bolo:
 
 **Shuruat:**
-> "Sir, mera project **ByteBites** hai — ye Zomato jaisa food delivery platform hai jo **microservices architecture** pe bana hai."
+> "Sir, mera project **ByteBites** hai — ye ek **food delivery platform** hai jo **microservices architecture** pe bana hai. Isme coupons, reviews, analytics, aur cloud deployment bhi hai."
 
 **Architecture explain karte waqt:**
 > "Backend ko maine **6 alag services** me divide kiya hai — Auth, Restaurant, Utils, Realtime, Rider, aur Admin. Har service apna port pe chalti hai aur apna specific kaam karti hai."
@@ -1787,7 +1822,7 @@ Utils never trusts frontend for amount — always fetches from Restaurant DB via
 A: ByteBites is a food delivery platform with 6 microservices supporting customers, restaurant sellers, delivery riders, and admin with real-time order tracking and online payments.
 
 **Q2: How many microservices? Name them.**  
-A: Six — Auth (5000), Restaurant (5001), Utils (5002), Realtime (5004), Rider (5005), Admin (5006).
+A: Six — Auth (5007), Restaurant (5001), Utils (5002), Realtime (5004), Rider (5005), Admin (5006).
 
 **Q3: What is microservices architecture?**  
 A: Breaking an application into small, independent services that communicate over network. Each service has one responsibility and can be deployed/scaled independently.
@@ -1859,7 +1894,7 @@ A: Middleware checks `req.user.role` — isSeller for restaurant routes, isAdmin
 A: Flexible document schema for nested order items. Native geospatial support with 2dsphere indexes and $near queries.
 
 **Q24: What is 2dsphere index?**  
-A: MongoDB index for GeoJSON data on a sphere (Earth). Enables location queries like "find within 500 meters."
+A: MongoDB index for GeoJSON data on a sphere (Earth). Enables location queries like "find within N meters" via `$geoNear`.
 
 **Q25: What collections exist?**  
 A: users, restaurants, menuitems, carts, addresses, orders, riders.
@@ -1868,7 +1903,7 @@ A: users, restaurants, menuitems, carts, addresses, orders, riders.
 A: `expiresAt` field with TTL — MongoDB auto-deletes unpaid orders after 15 minutes.
 
 **Q27: Do all services share one database?**  
-A: Yes, `Zomato_Clone` on Atlas. Ideal microservices would use separate DBs per service, but shared DB is used for project simplicity.
+A: Yes, one shared MongoDB Atlas cluster (database name via `DB_NAME` env — e.g. `ByteBites`). Ideal microservices would use separate DBs per service, but shared DB is used for project simplicity.
 
 **Q28: Haversine formula?**  
 A: Formula to calculate great-circle distance between two GPS coordinates. Used for delivery distance and fee calculation.
@@ -1922,7 +1957,7 @@ A: `riderAmount = ceil(distance_km) × ₹17` — stored in order for reference.
 A: First-come-first-serve. When rider accepts, atomic DB update checks riderId is still null. If another rider already assigned, request fails.
 
 **Q43: Rider search radius?**  
-A: 500 meters from restaurant location using MongoDB $near.
+A: Configurable via `RIDER_DISPATCH_RADIUS_M` (default 5000m locally). Uses MongoDB `$geoNear` from restaurant coordinates.
 
 **Q44: Order status transitions for seller?**  
 A: placed → accepted → preparing → ready_for_rider (enforced in frontend orderflow.ts).
@@ -1986,16 +2021,17 @@ A: (Personal answer) Microservices architecture, async messaging, real-time syst
 
 ## 47. Conclusion
 
-**ByteBites** is a comprehensive full-stack food delivery platform that goes far beyond typical academic CRUD projects. By implementing **six microservices**, **RabbitMQ asynchronous messaging**, **Socket.IO real-time communication**, **dual payment gateways**, **geospatial MongoDB queries**, and **four role-based user interfaces**, the project demonstrates practical understanding of modern distributed systems architecture.
+**ByteBites** is a comprehensive full-stack food delivery platform that goes far beyond typical academic CRUD projects. By implementing **six microservices**, **RabbitMQ asynchronous messaging**, **Socket.IO real-time communication**, **dual payment gateways**, **geospatial MongoDB queries**, **coupon engine**, **reviews**, **analytics dashboards**, and **four role-based user interfaces**, the project demonstrates practical understanding of modern distributed systems architecture.
 
-The system mirrors industry patterns used by platforms like Zomato and Swiggy, providing a strong foundation for viva examination, technical interviews, and portfolio presentation. Combined with cloud deployment (Vercel, Render, MongoDB Atlas), the project represents a **production-ready learning implementation** of a complex real-world domain.
+The system is deployed on **Vercel** (frontend), **Render** (6 backend services), **AWS EC2** (RabbitMQ), and **MongoDB Atlas** — providing a strong foundation for viva examination, technical interviews, and portfolio presentation.
 
 **Supporting documents:**
+- `README.md` — Features, setup, deployment, demo video
 - `ARCHITECTURE.md` — Mermaid diagrams for whiteboard/draw.io
 - `VIVA_DOCUMENTATION.md` — This complete guide
 - Source code — `services/*` and `frontend/`
 
-**Reference:** [Small Town Coder — Zomato Clone Tutorial](https://www.youtube.com/watch?v=79F36yYEDyo)
+**Author:** Shubham · [GitHub](https://github.com/subhm2004) · [LinkedIn](https://linkedin.com/in/subhm2004) · [Demo Video](https://drive.google.com/file/d/1dFfNB1KGfTNGw0WirO0h5zulQg5hJMcx/view?usp=drive_link)
 
 ---
 

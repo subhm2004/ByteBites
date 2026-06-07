@@ -25,6 +25,8 @@
 15. [RabbitMQ queues](#15-rabbitmq-queues)
 16. [Shared secrets & ports](#16-shared-secrets--ports)
 17. [Startup order](#17-startup-order)
+18. [Cloud deployment](#18-cloud-deployment)
+19. [Known limitations](#19-known-limitations)
 
 ---
 
@@ -46,7 +48,7 @@ flowchart TB
     end
 
     subgraph Storage["Data & messaging"]
-        MONGO[("MongoDB Atlas<br/>DB: Zomato_Clone")]
+        MONGO[("MongoDB Atlas<br/>DB: DB_NAME env")]
         RMQ{{"RabbitMQ<br/>payment_event<br/>order_ready_queue<br/>rider_queue*"}}
     end
 
@@ -89,7 +91,7 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    MONGO[("Zomato_Clone")]
+    MONGO[("MongoDB Atlas<br/>DB_NAME env")]
 
     AUTH -->|"users"| MONGO
     REST -->|"restaurants, menuitems, carts,<br/>addresses, orders, reviews,<br/>riderreviews, coupons"| MONGO
@@ -274,7 +276,7 @@ sequenceDiagram
     participant FE as Rider App
 
     Q->>RD: ORDER_READY_FOR_RIDER
-    RD->>DB: $geoNear — riders within 500m<br/>isAvailble=true, isVerified=true<br/>sorted by distance ASC
+    RD->>DB: $geoNear — riders within RIDER_DISPATCH_RADIUS_M<br/>isAvailble=true, isVerified=true<br/>sorted by distance ASC
 
     loop Sequential dispatch (index = 0, 1, 2…)
         RD->>RT: emit order:available → user:{nearestRider.userId}
@@ -291,10 +293,10 @@ sequenceDiagram
 
 | Parameter | Value |
 |-----------|-------|
-| Search radius | 500 meters |
+| Search radius | `RIDER_DISPATCH_RADIUS_M` env (default **5000m** locally) |
 | Offer timeout | 10 seconds per rider |
 | Sort order | Nearest first (`$geoNear` + `$sort distance ASC`) |
-| Requirements | `isVerified: true`, `isAvailble: true` |
+| Requirements | `isVerified: true`, `isAvailble: true`, valid GeoJSON `location` |
 
 ---
 
@@ -561,7 +563,7 @@ Admin uses the **native MongoDB driver** — no Mongoose, no inter-service HTTP.
 ```mermaid
 flowchart TB
     FE["Frontend Admin.tsx<br/>role = admin"] -->|"JWT"| ADM["Admin :5006"]
-    ADM --> DB[("MongoDB Zomato_Clone")]
+    ADM --> DB[("MongoDB Atlas<br/>DB_NAME env")]
 
     subgraph Tabs["Admin tabs"]
         U["Users — ban/unban"]
@@ -622,6 +624,8 @@ flowchart TB
 |-------|---------|-----------|----------|-------|--------|
 | `payment_event` | `PAYMENT_QUEUE` | Utils | Restaurant | `PAYMENT_SUCCESS` | Mark paid, coupon usage++, notify seller |
 | `order_ready_queue` | `ORDER_READY_QUEUE` | Restaurant | Rider | `ORDER_READY_FOR_RIDER` | Sequential nearest-rider dispatch |
+
+> **Boot assertion:** Both Restaurant and Rider services assert `order_ready_queue` at startup. Restaurant must assert before publishing when seller marks order `ready_for_rider`.
 | `rider_queue` | `RIDER_QUEUE` | — | — | — | Asserted only, unused |
 
 ---
@@ -639,7 +643,7 @@ flowchart TB
 | Realtime | 5004 | Socket.IO |
 | Rider | 5005 | RabbitMQ consumer at boot |
 | Admin | 5006 | Native MongoDB driver |
-| RabbitMQ | 5672 | Docker or CloudAMQP |
+| RabbitMQ | 5672 | AWS EC2 Docker (production) or local Docker |
 
 ### Secrets (must be identical)
 
@@ -668,6 +672,77 @@ Each backend service: `npm run dev` → `tsc --watch` + `node --watch dist/index
 
 ---
 
+## 18. Cloud deployment
+
+```mermaid
+flowchart TB
+    subgraph Users["Users"]
+        BROWSER["Browser"]
+    end
+
+    subgraph Vercel["Vercel"]
+        FE["React SPA<br/>Static + env URLs"]
+    end
+
+    subgraph Render["Render — 6 Web Services"]
+        AUTH["Auth :5007"]
+        REST["Restaurant :5001"]
+        UTILS["Utils :5002"]
+        RT["Realtime :5004"]
+        RIDER["Rider :5005"]
+        ADMIN["Admin :5006"]
+    end
+
+    subgraph AWS["AWS EC2"]
+        RMQ["RabbitMQ<br/>Docker :5672"]
+    end
+
+    subgraph Atlas["MongoDB Atlas"]
+        DB[("Shared cluster<br/>DB_NAME env")]
+    end
+
+    BROWSER --> FE
+    FE -->|"HTTPS + JWT"| AUTH & REST & UTILS & RIDER & ADMIN
+    FE -->|"WebSocket"| RT
+
+    AUTH & REST & RIDER & ADMIN --> DB
+    UTILS -->|"publish"| RMQ
+    REST -->|"consume + publish"| RMQ
+    RIDER -->|"consume"| RMQ
+    REST & RIDER --> RT
+```
+
+| Layer | Platform | Role |
+|-------|----------|------|
+| Frontend | Vercel | SPA hosting, env vars for service URLs |
+| Backend ×6 | Render | One web service per microservice |
+| Message broker | AWS EC2 + Docker | RabbitMQ (`payment_event`, `order_ready_queue`) |
+| Database | MongoDB Atlas M0 | Shared cluster across services |
+| Media | Cloudinary | Restaurant/menu/rider images |
+| Payments | Razorpay + Stripe | Test/live keys in Utils `.env` |
+
+**Demo:** [Google Drive video](https://drive.google.com/file/d/1dFfNB1KGfTNGw0WirO0h5zulQg5hJMcx/view?usp=drive_link) · **Repo:** [github.com/subhm2004/ByteBites](https://github.com/subhm2004/ByteBites)
+
+---
+
+## 19. Known limitations
+
+| Area | Limitation |
+|------|------------|
+| **Database** | Shared MongoDB cluster — not database-per-service |
+| **Rider dispatch** | Nearest-first within `RIDER_DISPATCH_RADIUS_M`; no batching |
+| **Real-time** | Single Realtime instance — no Redis Socket.IO adapter |
+| **Notifications** | In-app sockets only — no FCM/APNs |
+| **ETA** | Haversine rule-based — not live traffic / ML |
+| **Refunds** | Cancel UI only — no automated gateway refund |
+| **Admin** | Role set manually in MongoDB |
+| **Testing** | No CI integration/E2E suite |
+| **Unused queue** | `rider_queue` asserted but unused |
+
+See [README.md — Known Limitations](./README.md#known-limitations) for full detail.
+
+---
+
 ## Role-based UI routing
 
 ```mermaid
@@ -679,15 +754,5 @@ flowchart TD
     ROLE -->|customer / null| CUSTOMER["BrowserRouter<br/>Landing + Explore + Cart + …"]
 ```
 
----
-
-## Excalidraw / export tips
-
-1. Open [excalidraw.com](https://excalidraw.com)
-2. Use **Section 1** as the main system canvas
-3. Use **Sections 4, 6, 8, 10** for sequence / flow pages
-4. Export Mermaid blocks from [mermaid.live](https://mermaid.live) as PNG/SVG
 
 ---
-
-*Source: `services/*`, `frontend/src` — ByteBites (TOMATO repo). Last updated to reflect coupon engine, dynamic ETA, smart dispatch, reviews, admin coupons, and earnings dashboard.*
