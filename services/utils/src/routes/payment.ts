@@ -5,8 +5,11 @@ import {
   verifyRazorpayPayment,
   verifyStripe,
 } from "../controllers/payment.js";
+import { paymentLimiter } from "../middlewares/rateLimit.js";
 
 const router = express.Router();
+
+router.use(paymentLimiter);
 
 router.post("/create", createRazorpayOrder);
 router.post("/verify", verifyRazorpayPayment);

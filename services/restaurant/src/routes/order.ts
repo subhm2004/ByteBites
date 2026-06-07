@@ -16,12 +16,17 @@ import {
   updateOrderStatus,
   updateOrderStatusRider,
 } from "../controllers/order.js";
+import {
+  couponLimiter,
+  orderCreateLimiter,
+  orderWriteLimiter,
+} from "../middlewares/rateLimit.js";
 
 const router = express.Router();
 
 router.get("/myorder", isAuth, getMyOrders);
-router.put("/:orderId/cancel", isAuth, cancelOrderByCustomer);
-router.post("/:orderId/reorder", isAuth, reorderFromOrder);
+router.put("/:orderId/cancel", orderWriteLimiter, isAuth, cancelOrderByCustomer);
+router.post("/:orderId/reorder", orderWriteLimiter, isAuth, reorderFromOrder);
 router.get(
   "/analytics/:restaurantId",
   isAuth,
@@ -29,7 +34,7 @@ router.get(
   getRestaurantSalesAnalytics
 );
 router.get("/:id", isAuth, fetchSingleOrder);
-router.post("/new", isAuth, createOrder);
+router.post("/new", orderCreateLimiter, isAuth, createOrder);
 router.get("/payment/:id", fetchOrderForPayment);
 router.get(
   "/restaurant/:restaurantId",

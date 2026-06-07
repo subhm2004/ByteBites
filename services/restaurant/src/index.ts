@@ -11,6 +11,7 @@ import reviewRoutes from "./routes/review.js";
 import cors from "cors";
 import { connectRabbitMQ } from "./config/rabbitmq.js";
 import { startPaymentConsumer } from "./config/payment.consumer.js";
+import { generalLimiter } from "./middlewares/rateLimit.js";
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ const app = express();
 app.use(cors());
 
 app.use(express.json());
+app.use(generalLimiter);
 
 const PORT = process.env.PORT || 5001;
 

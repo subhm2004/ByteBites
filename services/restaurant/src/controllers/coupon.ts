@@ -27,8 +27,8 @@ export const validateCoupon = TryCatch(
 
       const pricing = calculateOrderPricing({
         subtotal: Number(subtotal),
-        distanceKm: distanceKm != null ? Number(distanceKm) : undefined,
         discountAmount: result.discountAmount,
+        ...(distanceKm != null ? { distanceKm: Number(distanceKm) } : {}),
       });
 
       return res.json({
